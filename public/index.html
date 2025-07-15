@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Quantum Lattice Shield - Secure Form Encryption</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>🛡️ Post Quantum Lattice Shield</h1>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#api">API</a>
+                <a href="#download">Download</a>
+                <a href="#docs">Docs</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <h2>Secure Your WordPress Forms with Post-Quantum Encryption</h2>
+                <p>Protect sensitive form data using lattice-based cryptography that's resistant to quantum computer attacks.</p>
+                <div class="cta-buttons">
+                    <a href="#download" class="btn btn-primary">Download Plugin</a>
+                    <a href="#api" class="btn btn-secondary">View API</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <h2>Features</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🔒</div>
+                        <h3>Post-Quantum Security</h3>
+                        <p>Uses Kyber lattice-based encryption that's resistant to quantum computer attacks.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Seamless Integration</h3>
+                        <p>Integrates directly with Gravity Forms - no complex setup required.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🌐</div>
+                        <h3>Cloud-Powered</h3>
+                        <p>Serverless microservice hosted on Netlify for reliability and scalability.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔧</div>
+                        <h3>Easy Configuration</h3>
+                        <p>Simple admin interface to select which form fields to encrypt.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="api" class="api-section">
+            <div class="container">
+                <h2>API Endpoints</h2>
+                <div class="api-grid">
+                    <div class="api-card">
+                        <h3>POST /api/encrypt</h3>
+                        <p>Encrypts form data using provided public key</p>
+                        <div class="api-example">
+                            <h4>Request:</h4>
+                            <pre><code>{
+  "publicKey": "base64_encoded_public_key",
+  "payload": "sensitive_data_to_encrypt"
+}</code></pre>
+                            <h4>Response:</h4>
+                                                         <pre><code>{
+   "encrypted": "base64_encoded_ciphertext",
+   "algorithm": "ml-kem-512"
+ }</code></pre>
+                        </div>
+                    </div>
+                    <div class="api-card">
+                        <h3>GET /api/generate-keypair</h3>
+                        <p>Generates a new Kyber keypair (development/testing only)</p>
+                        <div class="api-example">
+                            <h4>Response:</h4>
+                                                         <pre><code>{
+   "publicKey": "base64_encoded_public_key",
+   "privateKey": "base64_encoded_private_key",
+   "algorithm": "ml-kem-512"
+ }</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="download" class="download-section">
+            <div class="container">
+                <h2>Download WordPress Plugin</h2>
+                <div class="download-content">
+                    <div class="download-info">
+                        <h3>Get Started</h3>
+                        <p>Download the WordPress plugin to start encrypting your Gravity Forms data with post-quantum security.</p>
+                        <ul>
+                            <li>✅ Compatible with Gravity Forms</li>
+                            <li>✅ Automatic key generation</li>
+                            <li>✅ Field-level encryption selection</li>
+                            <li>✅ Easy admin interface</li>
+                        </ul>
+                    </div>
+                    <div class="download-actions">
+                        <a href="plugin-download/plugin.zip" class="btn btn-primary download-btn" download>
+                            📥 Download Plugin
+                        </a>
+                        <p class="version-info">Version 1.0.0 | WordPress 5.0+</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="docs" class="docs-section">
+            <div class="container">
+                <h2>Documentation</h2>
+                <div class="docs-grid">
+                    <div class="doc-card">
+                        <h3>Installation Guide</h3>
+                        <p>Step-by-step instructions for installing and configuring the plugin.</p>
+                        <a href="#" class="btn btn-outline">Coming Soon</a>
+                    </div>
+                    <div class="doc-card">
+                        <h3>API Reference</h3>
+                        <p>Complete API documentation for developers.</p>
+                        <a href="#" class="btn btn-outline">Coming Soon</a>
+                    </div>
+                    <div class="doc-card">
+                        <h3>Security Guide</h3>
+                        <p>Best practices for post-quantum cryptography implementation.</p>
+                        <a href="#" class="btn btn-outline">Coming Soon</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Post Quantum Lattice Shield. Securing the future of web forms.</p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html> 

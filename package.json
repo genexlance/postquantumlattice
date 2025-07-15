@@ -1,0 +1,42 @@
+{
+  "name": "post-quantum-lattice-shield",
+  "version": "1.0.0",
+  "description": "Secure microservice for encrypting form data using post-quantum lattice-based asymmetric encryption (Kyber)",
+  "main": "index.js",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "npm run build:plugin",
+    "build:plugin": "cd wordpress-plugin && zip -r ../public/plugin-download/plugin.zip .",
+    "test": "jest",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "post-quantum",
+    "encryption",
+    "kyber",
+    "lattice",
+    "wordpress",
+    "netlify"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "pqclean": "^0.8.1",
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^6.1.5",
+    "joi": "^17.9.2"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "eslint": "^8.42.0",
+    "prettier": "^2.8.8",
+    "netlify-cli": "^15.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 
