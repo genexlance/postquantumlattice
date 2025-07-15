@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 define('PQLS_VERSION', '1.0.0');
 define('PQLS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PQLS_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('PQLS_MICROSERVICE_URL', 'https://your-netlify-site.netlify.app/api');
+define('PQLS_MICROSERVICE_URL', 'https://postquantumlatticeshield.netlify.app/api');
 
 /**
  * Main plugin class
