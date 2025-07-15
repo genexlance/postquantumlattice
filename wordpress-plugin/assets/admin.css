@@ -1,0 +1,154 @@
+/* Post Quantum Lattice Shield Admin Styles */
+
+.pqls-info {
+    background: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.pqls-info h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.pqls-info ul {
+    margin-bottom: 0;
+}
+
+.pqls-info li {
+    margin-bottom: 8px;
+    color: #666;
+}
+
+#encrypted-fields-container {
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    background: #fafafa;
+}
+
+#encrypted-fields-container h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
+}
+
+#encrypted-fields-container table {
+    margin-bottom: 25px;
+}
+
+#encrypted-fields-container table:last-child {
+    margin-bottom: 0;
+}
+
+#encrypted-fields-container th {
+    background: #f1f1f1;
+    font-weight: 600;
+}
+
+#encrypted-fields-container td {
+    padding: 8px 12px;
+}
+
+#encrypted-fields-container input[type="checkbox"] {
+    margin: 0;
+}
+
+#key-status {
+    padding: 10px;
+    border-radius: 4px;
+}
+
+#key-status.notice-success {
+    background: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+#key-status.notice-error {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.form-table th {
+    width: 200px;
+    vertical-align: top;
+    padding-top: 15px;
+}
+
+.form-table td {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.form-table textarea[readonly] {
+    background: #f9f9f9;
+    color: #666;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    resize: vertical;
+}
+
+.form-table .description {
+    margin-top: 5px;
+    font-style: italic;
+}
+
+/* Loading spinner */
+.pqls-loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #555;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 5px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Button styling */
+.button.pqls-button {
+    background: #0073aa;
+    border-color: #0073aa;
+    color: white;
+}
+
+.button.pqls-button:hover {
+    background: #005a87;
+    border-color: #005a87;
+}
+
+/* Responsive design */
+@media screen and (max-width: 782px) {
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+    }
+    
+    .form-table th {
+        padding-bottom: 5px;
+    }
+    
+    .form-table td {
+        padding-top: 5px;
+        padding-left: 0;
+    }
+    
+    #encrypted-fields-container {
+        max-height: 300px;
+    }
+} 

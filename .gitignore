@@ -40,7 +40,6 @@ logs/
 *.log
 
 # WordPress plugin build
-wordpress-plugin/
 public/plugin-download/plugin.zip
 
 # Test coverage
