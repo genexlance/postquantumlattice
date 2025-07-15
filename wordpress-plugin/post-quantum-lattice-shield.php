@@ -48,6 +48,12 @@ class PostQuantumLatticeShield {
         // AJAX hooks
         add_action('wp_ajax_pqls_regenerate_keys', array($this, 'ajax_regenerate_keys'));
         add_action('wp_ajax_pqls_test_connection', array($this, 'ajax_test_connection'));
+        
+        // Enhanced visual indicators for encrypted fields
+        add_filter('gform_entry_field_value', array($this, 'format_encrypted_entry_display'), 10, 4);
+        add_filter('gform_entries_field_value', array($this, 'format_encrypted_entry_display'), 10, 4);
+        add_action('gform_entry_info', array($this, 'add_encryption_notice'), 10, 2);
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_gravity_forms_scripts'));
     }
     
     /**
@@ -486,6 +492,70 @@ class PostQuantumLatticeShield {
             <p><?php _e('Post Quantum Lattice Shield requires Gravity Forms to be installed and activated.', 'pqls'); ?></p>
         </div>
         <?php
+    }
+    
+    /**
+     * Format encrypted field display in Gravity Forms entries
+     */
+    public function format_encrypted_entry_display($value, $field, $entry, $form) {
+        // Check if this value is encrypted
+        if (strpos($value, '[ENCRYPTED:') === 0) {
+            $encrypted_data = substr($value, 11, -1); // Remove [ENCRYPTED: and ]
+            $short_preview = substr($encrypted_data, 0, 20) . '...';
+            
+            return sprintf(
+                '<div class="pqls-encrypted-field">
+                    <span class="pqls-encrypted-badge">🔒 ENCRYPTED</span>
+                    <div class="pqls-encrypted-content">
+                        <div class="pqls-encrypted-preview">%s</div>
+                        <div class="pqls-encrypted-full" style="display: none;">%s</div>
+                        <button type="button" class="pqls-toggle-encrypted button-secondary" data-target-preview=".pqls-encrypted-preview" data-target-full=".pqls-encrypted-full">
+                            <span class="show-text">Show Full</span>
+                            <span class="hide-text" style="display: none;">Hide</span>
+                        </button>
+                    </div>
+                </div>',
+                esc_html($short_preview),
+                '<textarea readonly class="pqls-encrypted-textarea">' . esc_textarea($encrypted_data) . '</textarea>'
+            );
+        }
+        
+        return $value;
+    }
+    
+    /**
+     * Add encryption notice to entry info
+     */
+    public function add_encryption_notice($form, $entry) {
+        $has_encrypted = false;
+        
+        foreach ($entry as $key => $value) {
+            if (strpos($value, '[ENCRYPTED:') === 0) {
+                $has_encrypted = true;
+                break;
+            }
+        }
+        
+        if ($has_encrypted) {
+            echo '<div class="pqls-entry-notice">
+                    <div class="notice notice-info inline">
+                        <p><strong>🔒 Post-Quantum Encryption:</strong> This entry contains encrypted fields protected with ML-KEM-512 lattice-based cryptography.</p>
+                    </div>
+                  </div>';
+        }
+    }
+    
+    /**
+     * Enqueue scripts for Gravity Forms pages
+     */
+    public function enqueue_gravity_forms_scripts($hook) {
+        // Only load on Gravity Forms pages
+        if (strpos($hook, 'gf_') === false && strpos($hook, 'gravityforms') === false) {
+            return;
+        }
+        
+        wp_enqueue_style('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.css', array(), PQLS_VERSION);
+        wp_enqueue_script('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.js', array('jquery'), PQLS_VERSION, true);
     }
 }
 
