@@ -47,7 +47,7 @@ class PostQuantumLatticeShield {
         // AJAX hooks
         add_action('wp_ajax_pqls_regenerate_keys', array($this, 'ajax_regenerate_keys'));
         add_action('wp_ajax_pqls_test_connection', array($this, 'ajax_test_connection'));
-        add_action("wp_ajax_pqls_decrypt_field", array($this, "ajax_decrypt_field"));        
+        
         // Enhanced visual indicators for encrypted fields
         add_filter('gform_entry_field_value', array($this, 'format_encrypted_entry_display'), 10, 4);
         add_filter('gform_entries_field_value', array($this, 'format_encrypted_entry_display'), 10, 4);
@@ -104,7 +104,7 @@ class PostQuantumLatticeShield {
         $role = get_role('administrator');
         if ($role) {
             $role->add_cap('manage_pqls');
-            $role->add_cap("decrypt_pqls_data");        }
+        }
     }
     
     /**
@@ -115,7 +115,7 @@ class PostQuantumLatticeShield {
         $role = get_role('administrator');
         if ($role) {
             $role->remove_cap('manage_pqls');
-            $role->remove_cap("decrypt_pqls_data");        }
+        }
     }
     
     /**
@@ -204,15 +204,10 @@ class PostQuantumLatticeShield {
         }
         
         wp_enqueue_script('pqls-admin', PQLS_PLUGIN_URL . 'assets/admin.js', array('jquery'), PQLS_VERSION, true);
-        wp_localize_script("pqls-admin", "pqls_ajax", array(
-            "ajax_url" => admin_url("admin-ajax.php"),
-            "nonce" => wp_create_nonce("pqls_nonce"),
-            "strings" => array(
-                "decrypting" => __("Decrypting...", "pqls"),
-                "decrypt_failed" => __("Decryption failed", "pqls"),
-                "copied" => __("Copied to clipboard", "pqls")
-            )
-        ));        ));
+        wp_localize_script('pqls-admin', 'pqls_ajax', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('pqls_nonce')
+        ));
         
         wp_enqueue_style('pqls-admin', PQLS_PLUGIN_URL . 'assets/admin.css', array(), PQLS_VERSION);
     }
@@ -456,97 +451,6 @@ class PostQuantumLatticeShield {
     }
     
     /**
-    /**
-     * Decrypt data using microservice
-     */
-    private function decrypt_data($encrypted_data) {
-        // Extract the encrypted data from the wrapper
-        if (!preg_match("/^[ENCRYPTED:(.+)]$/", $encrypted_data, $matches)) {
-            return false; // Not encrypted data
-        }
-        
-        $ciphertext = $matches[1];
-        $private_key = get_option("pqls_private_key");
-        
-        if (!$private_key) {
-            error_log("PQLS: No private key available for decryption");
-            return false;
-        }
-        
-        $settings = get_option($this->option_name, array());
-        $microservice_url = $settings["microservice_url"] ?? PQLS_MICROSERVICE_URL;
-        
-        $payload = array(
-            "privateKey" => $private_key,
-            "ciphertext" => $ciphertext
-        );
-        
-        $api_key = get_option("pqls_api_key");
-        $headers = array(
-            "Content-Type" => "application/json",
-        );
-        
-        if ($api_key) {
-            $headers["Authorization"] = "Bearer " . $api_key;
-        }
-        
-        $response = wp_remote_post($microservice_url . "/decrypt", array(
-            "timeout" => 30,
-            "headers" => $headers,
-            "body" => json_encode($payload)
-        ));
-        
-        if (is_wp_error($response)) {
-            error_log("PQLS: Decryption failed - " . $response->get_error_message());
-            return false;
-        }
-        
-        $body = wp_remote_retrieve_body($response);
-        $result = json_decode($body, true);
-        
-        if (isset($result["decrypted"])) {
-            return $result["decrypted"];
-        }
-        
-        return false;
-    }
-    
-    /**
-     * AJAX: Decrypt field value
-     */
-    public function ajax_decrypt_field() {
-        check_ajax_referer("pqls_nonce", "nonce");
-        
-        if (!current_user_can("decrypt_pqls_data")) {
-            wp_die(__("Insufficient permissions", "pqls"));
-        }
-        
-        $encrypted_data = sanitize_text_field($_POST["encrypted_data"]);
-        
-        if (empty($encrypted_data)) {
-            wp_send_json(array(
-                "success" => false,
-                "data" => __("No encrypted data provided", "pqls")
-            ));
-        }
-        
-        $decrypted = $this->decrypt_data($encrypted_data);
-        
-        if ($decrypted !== false) {
-            // Log the decryption attempt for audit purposes
-            error_log("PQLS: Field decrypted by user " . get_current_user_id() . " at " . current_time("mysql"));
-            
-            wp_send_json(array(
-                "success" => true,
-                "data" => $decrypted
-            ));
-        } else {
-            wp_send_json(array(
-                "success" => false,
-                "data" => __("Decryption failed", "pqls")
-            ));
-        }
-    }
      * AJAX: Regenerate keys
      */
     public function ajax_regenerate_keys() {
@@ -620,67 +524,29 @@ class PostQuantumLatticeShield {
      */
     public function format_encrypted_entry_display($value, $field, $entry, $form) {
         // Check if this value is encrypted
-        if (strpos($value, "[ENCRYPTED:") === 0) {
-            $encrypted_data = $value;
-            $short_preview = substr($encrypted_data, 0, 50) . "...";
-            
-            // Check if user can decrypt
-            $can_decrypt = current_user_can("decrypt_pqls_data");
-            $decrypt_button = "";
-            
-            if ($can_decrypt) {
-                $decrypt_button = "<button type="button" class="pqls-decrypt-btn button-secondary" 
-                                          data-encrypted="" . esc_attr($encrypted_data) . "" 
-                                          data-field-id="" . esc_attr($field->id) . ""
-                                          title="" . esc_attr__("Decrypt this field value", "pqls") . "">
-                                     <span class="dashicons dashicons-visibility"></span> " . __("Decrypt", "pqls") . "
-                                   </button>";
-            }
+        if (strpos($value, '[ENCRYPTED:') === 0) {
+            $encrypted_data = substr($value, 11, -1); // Remove [ENCRYPTED: and ]
+            $short_preview = substr($encrypted_data, 0, 20) . '...';
             
             return sprintf(
-                "<div class="pqls-encrypted-field">
-                    <div class="pqls-encrypted-badge">%s</div>
+                '<div class="pqls-encrypted-field">
+                    <span class="pqls-encrypted-badge">🔒 ENCRYPTED</span>
                     <div class="pqls-encrypted-content">
                         <div class="pqls-encrypted-preview">%s</div>
-                        <div class="pqls-decrypted-content" style="display: none;">
-                            <div class="pqls-decrypted-value"></div>
-                            <div class="pqls-security-warning">
-                                <small><strong>%s</strong> %s</small>
-                            </div>
-                        </div>
-                        <div class="pqls-encrypted-full" style="display: none;">
-                            <textarea readonly class="pqls-encrypted-textarea">%s</textarea>
-                        </div>
-                        <div class="pqls-field-actions">
-                            %s
-                            <button type="button" class="pqls-toggle-encrypted button-secondary" 
-                                    data-target-preview=".pqls-encrypted-preview" 
-                                    data-target-full=".pqls-encrypted-full">
-                                <span class="show-text">%s</span>
-                                <span class="hide-text" style="display: none;">%s</span>
-                            </button>
-                            <button type="button" class="pqls-copy-encrypted button-secondary" 
-                                    data-encrypted="" . esc_attr($encrypted_data) . ""
-                                    title="" . esc_attr__("Copy encrypted data to clipboard", "pqls") . "">
-                                <span class="dashicons dashicons-clipboard"></span> %s
-                            </button>
-                        </div>
+                        <div class="pqls-encrypted-full" style="display: none;">%s</div>
+                        <button type="button" class="pqls-toggle-encrypted button-secondary" data-target-preview=".pqls-encrypted-preview" data-target-full=".pqls-encrypted-full">
+                            <span class="show-text">Show Full</span>
+                            <span class="hide-text" style="display: none;">Hide</span>
+                        </button>
                     </div>
-                </div>",
-                __("🔒 ENCRYPTED", "pqls"),
+                </div>',
                 esc_html($short_preview),
-                __("⚠️ Security Warning:", "pqls"),
-                __("Decrypted data is visible in plaintext. Handle with care.", "pqls"),
-                esc_textarea(substr($encrypted_data, 11, -1)),
-                $decrypt_button,
-                __("Show Full", "pqls"),
-                __("Hide", "pqls"),
-                __("Copy", "pqls")
+                '<textarea readonly class="pqls-encrypted-textarea">' . esc_textarea($encrypted_data) . '</textarea>'
             );
         }
         
         return $value;
-    }    }
+    }
     
     /**
      * Add encryption notice to entry info
@@ -810,57 +676,7 @@ class PostQuantumLatticeShield {
             // Add visual styling to field editor
             jQuery('<style>')
                 .prop('type', 'text/css')
-                .html(`
-                    .pqls-encryption-setting {
-                        padding: 10px;
-                        background: #f8f9fa;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 4px;
-                        margin-top: 10px;
-                    }
-                    
-                    .pqls-encryption-setting .section_label {
-                        font-weight: 600;
-                        color: #2c3e50;
-                        display: flex;
-                        align-items: center;
-                        gap: 5px;
-                    }
-                    
-                    .pqls-encryption-info {
-                        margin-top: 8px;
-                        padding: 8px;
-                        background: #e8f5e8;
-                        border-radius: 3px;
-                        border-left: 3px solid #27ae60;
-                    }
-                    
-                    .pqls-encryption-info small {
-                        color: #27ae60;
-                        font-weight: 500;
-                        display: flex;
-                        align-items: center;
-                        gap: 5px;
-                    }
-                    
-                    .pqls-encrypted-field-editor {
-                        border: 2px solid #667eea !important;
-                        box-shadow: 0 0 0 1px #667eea !important;
-                    }
-                    
-                    .pqls-encrypted-field-editor::before {
-                        content: "💫🔒💫";
-                        position: absolute;
-                        top: -10px;
-                        right: -10px;
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        padding: 2px 6px;
-                        border-radius: 10px;
-                        font-size: 10px;
-                        z-index: 1000;
-                    }
-                `)
+                .html('.pqls-encryption-setting { padding: 10px; background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 10px; } .pqls-encryption-setting .section_label { font-weight: 600; color: #2c3e50; display: flex; align-items: center; gap: 5px; } .pqls-encryption-info { margin-top: 8px; padding: 8px; background: #e8f5e8; border-radius: 3px; border-left: 3px solid #27ae60; } .pqls-encryption-info small { color: #27ae60; font-weight: 500; display: flex; align-items: center; gap: 5px; } .pqls-encrypted-field-editor { border: 2px solid #667eea !important; box-shadow: 0 0 0 1px #667eea !important; } .pqls-encrypted-field-editor::before { content: "💫🔒💫"; position: absolute; top: -10px; right: -10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; z-index: 1000; }')
                 .appendTo('head');
         </script>
         <?php
