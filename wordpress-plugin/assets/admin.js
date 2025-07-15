@@ -1,14 +1,10 @@
 /**
  * Post Quantum Lattice Shield Admin JavaScript
  */
-jQuery(document).ready(function($) {
+(function($) {
+    'use strict';
     
-    // Initialize admin interface
-    PQLS_Admin.init();
-    
-});
-
-var PQLS_Admin = {
+    var PQLS_Admin = {
     
     init: function() {
         this.bindEvents();
@@ -213,4 +209,11 @@ var PQLS_Admin = {
 // Localization strings (to be populated by WordPress)
 var pqls_strings = {
     confirm_regenerate: 'Are you sure? This will invalidate all previously encrypted data!'
-}; 
+};
+
+// Initialize when document is ready
+$(document).ready(function() {
+    PQLS_Admin.init();
+});
+
+})(jQuery); 
