@@ -89,4 +89,6 @@
 - ✅ Security: Nonce validation, capability checks
 - ✅ jQuery fix: Fixed '$ is not a function' error in admin interface
 - ✅ Error handling: Improved key generation error handling and logging
-- ✅ Default URL: Updated plugin to use actual Netlify site URL as default 
+- ✅ Visual indicators: Enhanced encrypted field display with badges, toggles, and styling
+- ✅ Default URL: Updated plugin to use actual Netlify site URL as default
+- ✅ Visual indicators: Added enhanced encrypted field display in Gravity Forms 

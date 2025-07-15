@@ -54,6 +54,16 @@ class PostQuantumLatticeShield {
         add_filter('gform_entries_field_value', array($this, 'format_encrypted_entry_display'), 10, 4);
         add_action('gform_entry_info', array($this, 'add_encryption_notice'), 10, 2);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_gravity_forms_scripts'));
+        
+        // Gravity Forms field editor integration
+        add_action('gform_field_advanced_settings', array($this, 'add_encryption_field_setting'), 10, 2);
+        add_filter('gform_tooltips', array($this, 'add_encryption_tooltips'));
+        add_action('gform_editor_js', array($this, 'add_encryption_editor_js'));
+        
+        // Frontend field indicators and processing
+        add_filter('gform_field_content', array($this, 'add_encryption_field_indicator'), 10, 5);
+        add_filter('gform_field_css_class', array($this, 'add_encryption_field_class'), 10, 3);
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_scripts'));
     }
     
     /**
@@ -367,11 +377,6 @@ class PostQuantumLatticeShield {
      * Encrypt form data before submission
      */
     public function pre_submission_encrypt($form) {
-        if (empty($this->encrypted_fields)) {
-            return $form;
-        }
-        
-        $form_id = $form['id'];
         $public_key = get_option('pqls_public_key');
         
         if (!$public_key) {
@@ -380,9 +385,8 @@ class PostQuantumLatticeShield {
         }
         
         foreach ($form['fields'] as &$field) {
-            $field_key = $form_id . '_' . $field->id;
-            
-            if (in_array($field_key, $this->encrypted_fields)) {
+            // Check if this specific field has encryption enabled
+            if (!empty($field->pqls_enable_encryption)) {
                 $field_value = rgpost('input_' . $field->id);
                 
                 if (!empty($field_value)) {
@@ -556,6 +560,184 @@ class PostQuantumLatticeShield {
         
         wp_enqueue_style('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.css', array(), PQLS_VERSION);
         wp_enqueue_script('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.js', array('jquery'), PQLS_VERSION, true);
+    }
+    
+    /**
+     * Add encryption field setting to Gravity Forms field editor
+     */
+    public function add_encryption_field_setting($position, $form_id) {
+        if ($position == 25) { // Add after Advanced Settings
+            ?>
+            <li class="pqls_enable_encryption_setting field_setting">
+                <div class="pqls-encryption-setting">
+                    <label for="pqls_enable_encryption" class="section_label">
+                        <?php esc_html_e('Post-Quantum Encryption', 'pqls'); ?>
+                        <?php gform_tooltip('pqls_enable_encryption'); ?>
+                    </label>
+                    <input type="checkbox" id="pqls_enable_encryption" onclick="SetFieldProperty('pqls_enable_encryption', this.checked);" />
+                    <label for="pqls_enable_encryption" class="inline">
+                        <?php esc_html_e('Enable encryption for this field', 'pqls'); ?>
+                    </label>
+                    <div class="pqls-encryption-info">
+                        <small>
+                            <span class="dashicons dashicons-shield"></span>
+                            <?php esc_html_e('This field will be encrypted with ML-KEM-512 before saving to database', 'pqls'); ?>
+                        </small>
+                    </div>
+                </div>
+            </li>
+            <?php
+        }
+    }
+    
+    /**
+     * Add encryption tooltips to Gravity Forms
+     */
+    public function add_encryption_tooltips($tooltips) {
+        $tooltips['pqls_enable_encryption'] = sprintf(
+            '<h6>%s</h6><p>%s</p><p>%s</p>',
+            __('Post-Quantum Encryption', 'pqls'),
+            __('When enabled, this field\'s data will be encrypted using ML-KEM-512 lattice-based cryptography before being saved to the database.', 'pqls'),
+            __('This provides protection against quantum computer attacks and ensures long-term data security.', 'pqls')
+        );
+        return $tooltips;
+    }
+    
+    /**
+     * Add JavaScript for encryption field editor
+     */
+    public function add_encryption_editor_js() {
+        ?>
+        <script type="text/javascript">
+            // Add encryption setting to supported field types
+            fieldSettings.text += ", .pqls_enable_encryption_setting";
+            fieldSettings.textarea += ", .pqls_enable_encryption_setting";
+            fieldSettings.email += ", .pqls_enable_encryption_setting";
+            fieldSettings.phone += ", .pqls_enable_encryption_setting";
+            fieldSettings.name += ", .pqls_enable_encryption_setting";
+            fieldSettings.address += ", .pqls_enable_encryption_setting";
+            fieldSettings.website += ", .pqls_enable_encryption_setting";
+            fieldSettings.number += ", .pqls_enable_encryption_setting";
+            fieldSettings.date += ", .pqls_enable_encryption_setting";
+            fieldSettings.time += ", .pqls_enable_encryption_setting";
+            fieldSettings.select += ", .pqls_enable_encryption_setting";
+            fieldSettings.multiselect += ", .pqls_enable_encryption_setting";
+            fieldSettings.radio += ", .pqls_enable_encryption_setting";
+            fieldSettings.checkbox += ", .pqls_enable_encryption_setting";
+            
+            // Bind to the load field settings event
+            jQuery(document).bind('gform_load_field_settings', function(event, field, form) {
+                // Set the encryption checkbox based on field property
+                var isEncrypted = field.pqls_enable_encryption == true;
+                jQuery('#pqls_enable_encryption').prop('checked', isEncrypted);
+                
+                // Update visual indicator
+                if (isEncrypted) {
+                    jQuery('.field_selected').addClass('pqls-encrypted-field-editor');
+                } else {
+                    jQuery('.field_selected').removeClass('pqls-encrypted-field-editor');
+                }
+            });
+            
+            // Add visual styling to field editor
+            jQuery('<style>')
+                .prop('type', 'text/css')
+                .html(`
+                    .pqls-encryption-setting {
+                        padding: 10px;
+                        background: #f8f9fa;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 4px;
+                        margin-top: 10px;
+                    }
+                    
+                    .pqls-encryption-setting .section_label {
+                        font-weight: 600;
+                        color: #2c3e50;
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                    }
+                    
+                    .pqls-encryption-info {
+                        margin-top: 8px;
+                        padding: 8px;
+                        background: #e8f5e8;
+                        border-radius: 3px;
+                        border-left: 3px solid #27ae60;
+                    }
+                    
+                    .pqls-encryption-info small {
+                        color: #27ae60;
+                        font-weight: 500;
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                    }
+                    
+                    .pqls-encrypted-field-editor {
+                        border: 2px solid #667eea !important;
+                        box-shadow: 0 0 0 1px #667eea !important;
+                    }
+                    
+                    .pqls-encrypted-field-editor::before {
+                        content: "💫🔒💫";
+                        position: absolute;
+                        top: -10px;
+                        right: -10px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 2px 6px;
+                        border-radius: 10px;
+                        font-size: 10px;
+                        z-index: 1000;
+                    }
+                `)
+                .appendTo('head');
+        </script>
+        <?php
+    }
+    
+    /**
+     * Add encryption indicator to form fields on frontend
+     */
+    public function add_encryption_field_indicator($content, $field, $value, $lead_id, $form_id) {
+        // Check if field has encryption enabled
+        if (!empty($field->pqls_enable_encryption)) {
+            // Add encryption indicator to field
+            $indicator = '<div class="pqls-field-encryption-indicator">
+                            <span class="pqls-field-encryption-badge">💫🔒💫</span>
+                            <span class="pqls-field-encryption-text">Encrypted Field</span>
+                          </div>';
+            
+            // Insert indicator before the field input
+            $content = preg_replace('/(<div[^>]*class="[^"]*ginput_container[^"]*"[^>]*>)/', '$1' . $indicator, $content);
+        }
+        
+        return $content;
+    }
+    
+    /**
+     * Add CSS class to encrypted fields
+     */
+    public function add_encryption_field_class($classes, $field, $form) {
+        if (!empty($field->pqls_enable_encryption)) {
+            $classes .= ' pqls-encrypted-field-frontend';
+        }
+        return $classes;
+    }
+    
+    /**
+     * Enqueue frontend scripts for encrypted fields
+     */
+    public function enqueue_frontend_scripts() {
+        // Only enqueue on pages with Gravity Forms
+        if (!class_exists('GFCommon') || !GFCommon::has_form_on_page()) {
+            return;
+        }
+        
+        wp_enqueue_style('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.css', array(), PQLS_VERSION);
+        wp_enqueue_script('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.js', array('jquery'), PQLS_VERSION, true);
     }
 }
 
