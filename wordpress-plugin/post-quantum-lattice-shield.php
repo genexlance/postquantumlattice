@@ -418,7 +418,7 @@ class PostQuantumLatticeShield {
 
         $body = json_encode([
             'data' => $data,
-            'publicKey' => $public_key
+            'publicKey' => trim($public_key)
         ]);
 
         $response = wp_remote_post($microservice_url . '/encrypt', [
