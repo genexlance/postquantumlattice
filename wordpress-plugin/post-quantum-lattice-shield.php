@@ -513,6 +513,9 @@ class PostQuantumLatticeShield {
      * Decrypt data using microservice
      */
     private function decrypt_data($encrypted_data) {
+        if ($encrypted_data === null) {
+            return false;
+        }
         // Extract the encrypted data from the wrapper
         if (!preg_match('/^\[ENCRYPTED:(.+)\]$/', $encrypted_data, $matches)) {
             return false; // Not encrypted data
@@ -843,6 +846,9 @@ class PostQuantumLatticeShield {
      * Format encrypted field display in Gravity Forms entries
      */
     public function format_encrypted_entry_display($value, $field, $entry, $form) {
+        if ($value === null) {
+            return $value;
+        }
         // Debug logging
         error_log('PQLS: format_encrypted_entry_display called with value: ' . substr($value, 0, 50) . '...');
         error_log('PQLS: Value is null: ' . ($value === null ? 'yes' : 'no'));
@@ -918,14 +924,16 @@ class PostQuantumLatticeShield {
      */
     public function add_encryption_notice($form, $entry) {
         $has_encrypted = false;
-        
-        foreach ($entry as $key => $value) {
-            if ($value !== null && strpos($value, '[ENCRYPTED:') === 0) {
-                $has_encrypted = true;
-                break;
+
+        if (is_array($entry)) {
+            foreach ($entry as $key => $value) {
+                if ($value !== null && strpos($value, '[ENCRYPTED:') === 0) {
+                    $has_encrypted = true;
+                    break;
+                }
             }
         }
-        
+
         if ($has_encrypted) {
             echo '<div class="pqls-entry-notice">
                     <div class="notice notice-info inline">
