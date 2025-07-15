@@ -6,4 +6,4 @@ The plugin will be built and placed here once development is complete.
 
 Current status: Plugin development in progress
 
-Expected filename: plugin.zip 
+Expected filename: postquantumlatticeshield.zip 

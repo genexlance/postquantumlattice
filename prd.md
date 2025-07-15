@@ -85,7 +85,7 @@ Optional /functions/generate-keypair.js
 
 /public/index.html frontend landing page
 
-/public/plugin-download/plugin.zip (downloadable WordPress plugin)
+/public/plugin-download/postquantumlatticeshield.zip (downloadable WordPress plugin)
 
 Plugin:
 
