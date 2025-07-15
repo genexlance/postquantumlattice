@@ -1,0 +1,371 @@
+/**
+ * Post Quantum Lattice Shield - Gravity Forms Styling
+ * Enhanced visual indicators for encrypted fields
+ */
+
+/* Entry notice for encrypted forms */
+.pqls-entry-notice {
+    margin: 10px 0;
+}
+
+.pqls-entry-notice .notice {
+    margin: 0;
+    padding: 8px 12px;
+    border-left: 4px solid #007cba;
+    background: #f0f8ff;
+}
+
+.pqls-entry-notice .notice p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Encrypted field container */
+.pqls-encrypted-field {
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 4px 0;
+    position: relative;
+}
+
+/* Encrypted badge */
+.pqls-encrypted-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Encrypted content area */
+.pqls-encrypted-content {
+    margin-top: 8px;
+}
+
+/* Encrypted preview text */
+.pqls-encrypted-preview {
+    font-family: 'Courier New', monospace;
+    background: #f1f3f4;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #5f6368;
+    border: 1px solid #e8eaed;
+    word-break: break-all;
+}
+
+/* Full encrypted data display */
+.pqls-encrypted-full {
+    margin-top: 8px;
+}
+
+.pqls-encrypted-textarea {
+    width: 100%;
+    min-height: 100px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 8px;
+    resize: vertical;
+    color: #5f6368;
+    line-height: 1.4;
+}
+
+/* Toggle button */
+.pqls-toggle-encrypted {
+    margin-top: 8px;
+    font-size: 12px;
+    padding: 4px 8px;
+    height: auto;
+    min-height: 28px;
+    border: 1px solid #007cba;
+    background: white;
+    color: #007cba;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pqls-toggle-encrypted:hover {
+    background: #007cba;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,124,186,0.2);
+}
+
+.pqls-toggle-encrypted:active {
+    transform: translateY(0);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .pqls-encrypted-field {
+        padding: 8px;
+    }
+    
+    .pqls-encrypted-badge {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+    
+    .pqls-encrypted-preview {
+        font-size: 11px;
+        padding: 6px;
+    }
+    
+    .pqls-encrypted-textarea {
+        font-size: 10px;
+        min-height: 80px;
+    }
+}
+
+/* Animation for show/hide transitions */
+.pqls-encrypted-full {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.pqls-encrypted-full.show {
+    opacity: 1;
+}
+
+.pqls-encrypted-preview {
+    transition: opacity 0.3s ease;
+}
+
+.pqls-encrypted-preview.hide {
+    opacity: 0;
+}
+
+/* Security indicator styles */
+.pqls-security-level {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #5f6368;
+    margin-top: 4px;
+}
+
+.pqls-security-level::before {
+    content: "🛡️";
+    font-size: 12px;
+}
+
+/* Hover effects */
+.pqls-encrypted-field:hover {
+    border-color: #007cba;
+    box-shadow: 0 2px 8px rgba(0,124,186,0.1);
+    transition: all 0.2s ease;
+}
+
+/* Loading state */
+.pqls-encrypted-field.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.pqls-encrypted-field.loading::after {
+    content: "⏳";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .pqls-encrypted-field {
+        background: #1a1a1a;
+        border-color: #404040;
+        color: #e0e0e0;
+    }
+    
+    .pqls-encrypted-preview {
+        background: #2d2d2d;
+        border-color: #404040;
+        color: #c0c0c0;
+    }
+    
+    .pqls-encrypted-textarea {
+        background: #2d2d2d;
+        border-color: #404040;
+        color: #c0c0c0;
+    }
+    
+    .pqls-toggle-encrypted {
+        background: #2d2d2d;
+        border-color: #007cba;
+        color: #4db8ff;
+    }
+    
+    .pqls-toggle-encrypted:hover {
+        background: #007cba;
+        color: white;
+    }
+}
+
+/* Print styles */
+@media print {
+    .pqls-toggle-encrypted {
+        display: none;
+    }
+    
+    .pqls-encrypted-full {
+        display: none !important;
+    }
+    
+    .pqls-encrypted-preview::after {
+        content: " (Encrypted data hidden for security)";
+        font-style: italic;
+        color: #666;
+    }
+} 
+/* Decrypt button styles */
+.pqls-decrypt-btn {
+    background: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+.pqls-decrypt-btn:hover {
+    background: #218838;
+    border-color: #218838;
+    color: white;
+}
+
+.pqls-hide-btn {
+    background: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.pqls-hide-btn:hover {
+    background: #5a6268;
+    border-color: #5a6268;
+    color: white;
+}
+
+.pqls-field-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.pqls-decrypted-content {
+    margin-top: 8px;
+}
+
+.pqls-decrypted-value {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.pqls-decrypted-value pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #212529;
+}
+
+.pqls-security-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 8px;
+    border-left: 4px solid #ffc107;
+}
+
+.pqls-security-warning small {
+    color: #856404;
+    display: block;
+    margin: 0;
+}
+
+/* Loading spinner animation */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Copy button styling */
+.pqls-copy-encrypted {
+    background: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+.pqls-copy-encrypted:hover {
+    background: #138496;
+    border-color: #138496;
+    color: white;
+}
+
+.pqls-copy-encrypted.copied {
+    background: #28a745;
+    border-color: #28a745;
+}
+
+.pqls-copy-encrypted.copy-failed {
+    background: #dc3545;
+    border-color: #dc3545;
+}
+
+/* Responsive design for field actions */
+@media (max-width: 768px) {
+    .pqls-field-actions {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .pqls-field-actions button {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Enhanced security warning styling */
+.pqls-security-warning strong {
+    font-weight: 600;
+    color: #721c24;
+}
+
+/* Improved button focus states */
+.pqls-decrypt-btn:focus,
+.pqls-hide-btn:focus,
+.pqls-copy-encrypted:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+

@@ -1,0 +1,278 @@
+/**
+ * Post Quantum Lattice Shield - Frontend Styling
+ * Visual indicators for encrypted fields on form frontend
+ */
+
+/* Encrypted field container */
+.pqls-encrypted-field-frontend {
+    position: relative;
+}
+
+/* Encryption indicator container */
+.pqls-field-encryption-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    animation: pqls-fade-in 0.3s ease;
+}
+
+/* Encryption badge */
+.pqls-field-encryption-badge {
+    font-size: 14px;
+    line-height: 1;
+    animation: pqls-glow 2s ease-in-out infinite alternate;
+}
+
+/* Encryption text */
+.pqls-field-encryption-text {
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Encrypted field styling */
+.pqls-encrypted-field-frontend .ginput_container {
+    position: relative;
+}
+
+.pqls-encrypted-field-frontend .ginput_container input,
+.pqls-encrypted-field-frontend .ginput_container textarea,
+.pqls-encrypted-field-frontend .ginput_container select {
+    border: 2px solid #667eea;
+    box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.1);
+    transition: all 0.3s ease;
+}
+
+.pqls-encrypted-field-frontend .ginput_container input:focus,
+.pqls-encrypted-field-frontend .ginput_container textarea:focus,
+.pqls-encrypted-field-frontend .ginput_container select:focus {
+    border-color: #764ba2;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+/* Security badge position */
+.pqls-encrypted-field-frontend .ginput_container::after {
+    content: "🛡️";
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #27ae60;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Hover effects */
+.pqls-encrypted-field-frontend:hover .pqls-field-encryption-indicator {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.pqls-encrypted-field-frontend:hover .ginput_container input,
+.pqls-encrypted-field-frontend:hover .ginput_container textarea,
+.pqls-encrypted-field-frontend:hover .ginput_container select {
+    border-color: #764ba2;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+/* Animations */
+@keyframes pqls-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pqls-glow {
+    from {
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+    }
+    to {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+    }
+}
+
+@keyframes pqls-pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .pqls-field-encryption-indicator {
+        padding: 4px 8px;
+        gap: 6px;
+    }
+    
+    .pqls-field-encryption-badge {
+        font-size: 12px;
+    }
+    
+    .pqls-field-encryption-text {
+        font-size: 10px;
+    }
+    
+    .pqls-encrypted-field-frontend .ginput_container::after {
+        width: 16px;
+        height: 16px;
+        font-size: 8px;
+        top: -6px;
+        right: -6px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .pqls-field-encryption-indicator {
+        background: linear-gradient(135deg, #4a5568 0%, #553c9a 100%);
+    }
+    
+    .pqls-encrypted-field-frontend .ginput_container input,
+    .pqls-encrypted-field-frontend .ginput_container textarea,
+    .pqls-encrypted-field-frontend .ginput_container select {
+        background: #2d3748;
+        color: #e2e8f0;
+        border-color: #4a5568;
+    }
+    
+    .pqls-encrypted-field-frontend .ginput_container input:focus,
+    .pqls-encrypted-field-frontend .ginput_container textarea:focus,
+    .pqls-encrypted-field-frontend .ginput_container select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .pqls-field-encryption-indicator {
+        background: #000;
+        border: 2px solid #fff;
+    }
+    
+    .pqls-field-encryption-text {
+        color: #fff;
+        font-weight: 700;
+    }
+    
+    .pqls-encrypted-field-frontend .ginput_container input,
+    .pqls-encrypted-field-frontend .ginput_container textarea,
+    .pqls-encrypted-field-frontend .ginput_container select {
+        border: 3px solid #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .pqls-field-encryption-indicator {
+        animation: none;
+    }
+    
+    .pqls-field-encryption-badge {
+        animation: none;
+    }
+    
+    .pqls-encrypted-field-frontend .ginput_container input,
+    .pqls-encrypted-field-frontend .ginput_container textarea,
+    .pqls-encrypted-field-frontend .ginput_container select {
+        transition: none;
+    }
+    
+    .pqls-encrypted-field-frontend:hover .pqls-field-encryption-indicator {
+        transform: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .pqls-field-encryption-indicator {
+        background: #000 !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .pqls-field-encryption-badge {
+        animation: none;
+    }
+    
+    .pqls-encrypted-field-frontend .ginput_container::after {
+        display: none;
+    }
+}
+
+/* Focus visible for accessibility */
+.pqls-field-encryption-indicator:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* Additional Gravity Forms integration */
+.gform_wrapper .pqls-encrypted-field-frontend {
+    margin-bottom: 20px;
+}
+
+.gform_wrapper .pqls-encrypted-field-frontend .gfield_label {
+    font-weight: 600;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gform_wrapper .pqls-encrypted-field-frontend .gfield_label::after {
+    content: "🔒";
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* Validation styling for encrypted fields */
+.pqls-encrypted-field-frontend.gfield_error .ginput_container input,
+.pqls-encrypted-field-frontend.gfield_error .ginput_container textarea,
+.pqls-encrypted-field-frontend.gfield_error .ginput_container select {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 1px rgba(229, 62, 62, 0.1);
+}
+
+.pqls-encrypted-field-frontend.gfield_error .pqls-field-encryption-indicator {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+}
+
+/* Success state */
+.pqls-encrypted-field-frontend.gfield_success .ginput_container input,
+.pqls-encrypted-field-frontend.gfield_success .ginput_container textarea,
+.pqls-encrypted-field-frontend.gfield_success .ginput_container select {
+    border-color: #38a169;
+    box-shadow: 0 0 0 1px rgba(56, 161, 105, 0.1);
+}
+
+.pqls-encrypted-field-frontend.gfield_success .pqls-field-encryption-indicator {
+    background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+} 

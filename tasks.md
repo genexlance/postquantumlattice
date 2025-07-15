@@ -86,6 +86,23 @@
 3. **Run Diagnostic**: Access test-decrypt.php to diagnose any remaining issues
 4. **Check Error Logs**: Monitor WordPress debug.log for detailed error messages
 
+## FINAL DEBUGGING & FIXES ✅
+- [x] Fixed PHP warning "Attempt to read property 'id' on int" by handling both field objects and IDs
+- [x] Added comprehensive debug information panel to admin settings page
+- [x] Added "Test Decrypt" button for full encrypt/decrypt cycle testing
+- [x] Enhanced error logging with detailed debugging information
+- [x] Added AJAX test decrypt functionality for easier troubleshooting
+- [x] Improved error messages to guide users to check error logs
+- [x] Added configuration status display (API key length, private key status, etc.)
+
+## UPDATED USER DEBUGGING STEPS 📋
+1. **Go to Settings → PQ Lattice Shield**
+2. **Check Debug Information panel** - Verify API key and private key are set
+3. **Use "Test Connection" button** - Verify microservice connectivity
+4. **Use "Test Decrypt" button** - Test full encrypt/decrypt cycle
+5. **Check WordPress debug.log** - Look for detailed PQLS error messages
+6. **If still failing**: Check the microservice URL and API key are correct
+
 ## Issues Fixed ✅
 - [x] Fixed Netlify build error (wordpress-plugin in .gitignore)
 - [x] Generated and configured API key authentication
