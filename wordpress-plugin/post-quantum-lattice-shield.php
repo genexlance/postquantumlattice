@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Post Quantum Lattice Shield
  * Plugin URI: https://github.com/your-username/post-quantum-lattice-shield
- * Description: Secure form data encryption using post-quantum ML-KEM-512 cryptography. Integrates with Gravity Forms to encrypt sensitive field data.
- * Version: 1.0.0
+ * Description: Secure form data encryption using RSA-OAEP-256. Integrates with Gravity Forms to encrypt sensitive field data.
+ * Version: 1.1.0
  * Author: Your Name
  * License: MIT
  * Requires at least: 5.0
@@ -137,18 +137,12 @@ class PostQuantumLatticeShield {
      * Generate ML-KEM keypair
      */
     private function generate_keypair() {
-        // For WordPress, we'll generate the keypair by calling our microservice
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         
-        $headers = array(
-            'Content-Type' => 'application/json',
-        );
-        
-        $response = wp_remote_get($microservice_url . '/generate-keypair', array(
-            'timeout' => 30,
-            'headers' => $headers
-        ));
+        $response = wp_remote_get($microservice_url . '/generate-keypair', [
+            'timeout' => 30
+        ]);
         
         if (is_wp_error($response)) {
             error_log('PQLS: Failed to generate keypair - ' . $response->get_error_message());
@@ -420,94 +414,75 @@ class PostQuantumLatticeShield {
      * Encrypt data using microservice
      */
     private function encrypt_data($data, $public_key) {
-        $settings = get_option($this->option_name, array());
-        $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
-        
-        $headers = array('Content-Type' => 'application/json');
-        $body = array(
+        $microservice_url = get_option('pqls_settings')['microservice_url'] ?? PQLS_MICROSERVICE_URL;
+
+        $body = json_encode([
             'data' => $data,
             'publicKey' => $public_key
-        );
-        
-        $response = wp_remote_post($microservice_url . '/encrypt', array(
-            'headers' => $headers,
-            'body' => json_encode($body),
+        ]);
+
+        $response = wp_remote_post($microservice_url . '/encrypt', [
+            'headers' => ['Content-Type' => 'application/json'],
+            'body' => $body,
             'timeout' => 30
-        ));
-        
+        ]);
+
         if (is_wp_error($response)) {
             error_log('PQLS: Encryption failed - ' . $response->get_error_message());
-            return $data; // Return original data on failure
+            return false;
         }
-        
+
         $status_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
-        
+
         if ($status_code !== 200) {
-            error_log('PQLS: Encryption failed with status ' . $status_code . ': ' . $response_body);
-            return $data;
+            error_log("PQLS: Encryption failed with status {$status_code}: {$response_body}");
+            return false;
         }
-        
-        $response_data = json_decode($response_body, true);
-        
-        return $response_data['encryptedData'] ?? $data;
+
+        $result = json_decode($response_body, true);
+        return $result['encryptedData'] ?? false;
     }
-    
-    /**
-     * Decrypt data using microservice
-     */
+
     private function decrypt_data($encrypted_data) {
         $api_key = get_option('pqls_api_key');
         $microservice_url = get_option('pqls_settings')['microservice_url'] ?? PQLS_MICROSERVICE_URL;
-
-        if (empty($api_key)) {
-            return ['success' => false, 'message' => 'API Key is not configured.'];
-        }
-
-        if (empty($encrypted_data)) {
-            return ['success' => false, 'message' => 'Encrypted data is empty.'];
-        }
-
         $private_key = get_option('pqls_private_key');
-        if (empty($private_key)) {
-            return ['success' => false, 'message' => 'Private key not found.'];
+
+        if (empty($api_key) || empty($private_key)) {
+            return ['success' => false, 'message' => 'API Key or Private Key is not configured.'];
         }
-        
-        $headers = array(
-            'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer ' . $api_key,
-        );
 
         $body = json_encode([
             'encryptedData' => $encrypted_data,
             'privateKey' => $private_key
         ]);
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log('PQLS: Failed to encode JSON for decryption: ' . json_last_error_msg());
-            return ['success' => false, 'message' => 'Internal error: could not encode request.'];
-        }
-        
-        $response = wp_remote_post($microservice_url . '/decrypt', array(
-            'timeout' => 30,
-            'headers' => $headers,
-            'body' => $body
-        ));
-        
+        $response = wp_remote_post($microservice_url . '/decrypt', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer ' . $api_key
+            ],
+            'body' => $body,
+            'timeout' => 30
+        ]);
+
         if (is_wp_error($response)) {
             error_log('PQLS: Decryption request failed - ' . $response->get_error_message());
-            return ['success' => false, 'message' => 'Decryption request failed: ' . $response->get_error_message()];
+            return ['success' => false, 'message' => 'Request failed: ' . $response->get_error_message()];
         }
-        
+
         $status_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
-        
         $result = json_decode($response_body, true);
-        
+
         if ($status_code === 200 && isset($result['decryptedData'])) {
             return ['success' => true, 'data' => $result['decryptedData']];
         } else {
-            $error_message = isset($result['error']) ? $result['error'] : 'Unknown error during decryption.';
+            $error_message = $result['error'] ?? 'Unknown error';
+            if(isset($result['details'])) {
+                $error_message .= ' - Details: ' . $result['details'];
+            }
             error_log("PQLS: Decryption failed with status {$status_code}. Response: {$response_body}");
             return ['success' => false, 'message' => $error_message];
         }
