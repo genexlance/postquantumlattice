@@ -71,7 +71,31 @@ function authenticateRequest(event) {
   return isAuthenticated;
 }
 
-exports.handler = async (event, context) => {
+exports.handler = async (event) => {
+    console.log('Decrypt function invoked.');
+    console.log('Received headers:', JSON.stringify(event.headers, null, 2));
+    console.log('Received body:', event.body);
+
+    // 1. API Key Authentication
+    const apiKey = process.env.DECRYPT_API_KEY;
+    const authHeader = event.headers.authorization;
+
+    if (!apiKey) {
+        console.error('DECRYPT_API_KEY is not set in environment variables.');
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Server configuration error.' })
+        };
+    }
+
+    if (!authHeader || authHeader !== `Bearer ${apiKey}`) {
+        console.error('Unauthorized access attempt. Invalid or missing API key.');
+        return {
+            statusCode: 401,
+            body: JSON.stringify({ error: 'Unauthorized' })
+        };
+    }
+
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',

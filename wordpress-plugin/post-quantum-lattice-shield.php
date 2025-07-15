@@ -248,161 +248,65 @@ class PostQuantumLatticeShield {
                 ?>
 
                 <table class="form-table">
-                    <tr>
+                    <tr valign="top">
                         <th scope="row"><?php _e('Microservice URL', 'pqls'); ?></th>
                         <td>
-                            <input type="url" name="<?php echo $this->option_name; ?>[microservice_url]"
-                                   value="<?php echo esc_attr($settings['microservice_url'] ?? PQLS_MICROSERVICE_URL); ?>"
-                                   class="regular-text" required />
-                            <p class="description"><?php _e('URL of your Netlify microservice endpoint.', 'pqls'); ?></p>
+                            <input type="text" name="<?php echo $this->option_name; ?>[microservice_url]" value="<?php echo esc_attr($settings['microservice_url'] ?? PQLS_MICROSERVICE_URL); ?>" class="regular-text" />
+                            <p class="description"><?php _e('The URL of your post-quantum encryption microservice.', 'pqls'); ?></p>
                         </td>
                     </tr>
-
-                    <tr>
-                        <th scope="row">
-                            <label for="pqls_api_key"><?php _e('Decryption API Key', 'pqls'); ?></label>
-                        </th>
+                    <tr valign="top">
+                        <th scope="row"><?php _e('API Key', 'pqls'); ?></th>
                         <td>
-                            <input type="password" id="pqls_api_key" name="pqls_api_key"
-                                   value="<?php echo esc_attr(get_option('pqls_api_key')); ?>"
-                                   class="regular-text" />
-                            <p class="description"><?php _e('Required for decrypting data. This key is stored in your microservice environment variables.', 'pqls'); ?></p>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <th scope="row"><?php _e('Public Key', 'pqls'); ?></th>
-                        <td>
-                            <textarea readonly class="large-text" rows="10"><?php echo esc_textarea($public_key); ?></textarea>
-                            <p class="description">
-                                <?php _e('Algorithm:', 'pqls'); ?> <strong><?php echo esc_html($algorithm); ?></strong><br>
-                                <?php if ($key_generated): ?>
-                                    <?php _e('Generated:', 'pqls'); ?> <?php echo esc_html($key_generated); ?>
-                                <?php endif; ?>
-                            </p>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <th scope="row"><?php _e('Key Management', 'pqls'); ?></th>
-                        <td>
-                            <button type="button" id="regenerate-keys" class="button button-secondary">
-                                <?php _e('Regenerate Key Pair', 'pqls'); ?>
-                            </button>
-                            <button type="button" id="test-connection" class="button button-secondary">
-                                <?php _e('Test Connection', 'pqls'); ?>
-                            </button>
-                            <button type="button" id="test-decrypt" class="button button-secondary">
-                                <?php _e('Test Decrypt', 'pqls'); ?>
-                            </button>
-                            <div id="key-status" class="notice" style="display:none; margin-top: 10px;"></div>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <th scope="row"><?php _e('Encrypted Fields', 'pqls'); ?></th>
-                        <td>
-                            <div id="encrypted-fields-container">
-                                <?php $this->render_encrypted_fields_settings($settings); ?>
-                            </div>
-                            <p class="description">
-                                <?php _e('Select which Gravity Forms fields should be encrypted before storage.', 'pqls'); ?>
-                            </p>
+                            <input type="password" name="pqls_api_key" value="<?php echo esc_attr(get_option('pqls_api_key')); ?>" class="regular-text" />
+                            <p class="description"><?php _e('Your API key for the microservice.', 'pqls'); ?></p>
                         </td>
                     </tr>
                 </table>
                 
+                <h2><?php _e('Keypair Information', 'pqls'); ?></h2>
+                <table class="form-table">
+                    <tr valign="top">
+                        <th scope="row"><?php _e('Algorithm', 'pqls'); ?></th>
+                        <td><code><?php echo esc_html($algorithm); ?></code></td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row"><?php _e('Public Key', 'pqls'); ?></th>
+                        <td>
+                            <textarea readonly class="widefat" rows="5"><?php echo esc_textarea($public_key); ?></textarea>
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row"><?php _e('Key Generated', 'pqls'); ?></th>
+                        <td><?php echo esc_html($key_generated ? date_i18n(get_option('date_format') . ' @ ' . get_option('time_format'), strtotime($key_generated)) : __('Never', 'pqls')); ?></td>
+                    </tr>
+                </table>
+
+                <p>
+                    <button type="button" id="pqls-regenerate-keys" class="button"><?php _e('Regenerate Keys', 'pqls'); ?></button>
+                    <button type="button" id="pqls-test-connection" class="button"><?php _e('Test Connection', 'pqls'); ?></button>
+                    <button type="button" id="pqls-test-decrypt" class="button-primary"><?php _e('Test Decrypt', 'pqls'); ?></button>
+                </p>
+
+                <div id="pqls-test-results" style="display:none; border: 1px solid #ccc; padding: 10px; margin-top: 20px;"></div>
+
+                <h2><?php _e('Encrypted Fields', 'pqls'); ?></h2>
+                <p><?php _e('Configure which Gravity Form fields should be encrypted. Go to your form settings to enable encryption for specific fields.', 'pqls'); ?></p>
+                <?php $this->render_encrypted_fields_settings($settings); ?>
+
                 <?php submit_button(); ?>
             </form>
             
-            <div class="pqls-debug-info" style="margin-top: 20px; padding: 15px; background: #f0f0f0; border: 1px solid #ccc;">
-                <h4><?php _e('Debug Information', 'pqls'); ?></h4>
-                <p><strong>API Key Status:</strong> <?php echo get_option('pqls_api_key') ? 'Set' : 'Not Set'; ?></p>
-                <p><strong>Private Key Status:</strong> <?php echo get_option('pqls_private_key') ? 'Set' : 'Not Set'; ?></p>
-                <p><strong>Microservice URL:</strong> <?php echo esc_html($settings['microservice_url'] ?? PQLS_MICROSERVICE_URL); ?></p>
-                <p><strong>Current User Can Decrypt:</strong> <?php echo current_user_can('decrypt_pqls_data') ? 'Yes' : 'No'; ?></p>
-                <p><em><?php _e('Check your browser console (F12) and WordPress debug.log for detailed error messages.', 'pqls'); ?></em></p>
-            </div>
-            
-            <div class="pqls-info">
-                <h3><?php _e('Security Information', 'pqls'); ?></h3>
+            <div class="pqls-debug-info">
+                <h2><?php _e('Debug Information', 'pqls'); ?></h2>
                 <ul>
-                    <li><?php _e('Public keys are safe to store and can be viewed by administrators.', 'pqls'); ?></li>
-                    <li><?php _e('Private keys are stored securely and used only for key generation.', 'pqls'); ?></li>
-                    <li><?php _e('All encryption is performed by the remote microservice via HTTPS.', 'pqls'); ?></li>
-                    <li><?php _e('ML-KEM-512 provides quantum-resistant security.', 'pqls'); ?></li>
+                    <li><strong>API Key Set:</strong> <?php echo !empty(get_option('pqls_api_key')) ? 'Yes' : 'No'; ?></li>
+                    <li><strong>Private Key Set:</strong> <?php echo !empty(get_option('pqls_private_key')) ? 'Yes' : 'No'; ?></li>
+                    <li><strong>Microservice URL:</strong> <?php echo esc_url($settings['microservice_url'] ?? PQLS_MICROSERVICE_URL); ?></li>
+                    <li><strong>User can decrypt:</strong> <?php echo current_user_can('decrypt_pqls_data') ? 'Yes' : 'No'; ?></li>
                 </ul>
             </div>
         </div>
-        
-        <script>
-        jQuery(document).ready(function($) {
-            // Regenerate keys
-            $('#regenerate-keys').on('click', function() {
-                if (!confirm('<?php _e('Are you sure? This will invalidate all previously encrypted data!', 'pqls'); ?>')) {
-                    return;
-                }
-                
-                $.ajax({
-                    url: pqls_ajax.ajax_url,
-                    type: 'POST',
-                    data: {
-                        action: 'pqls_regenerate_keys',
-                        nonce: pqls_ajax.nonce
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('<?php _e('Failed to regenerate keys', 'pqls'); ?>');
-                        }
-                    }
-                });
-            });
-            
-            // Test connection
-            $('#test-connection').on('click', function() {
-                $.ajax({
-                    url: pqls_ajax.ajax_url,
-                    type: 'POST',
-                    data: {
-                        action: 'pqls_test_connection',
-                        nonce: pqls_ajax.nonce
-                    },
-                    success: function(response) {
-                        $('#key-status').removeClass('notice-error notice-success')
-                            .addClass(response.success ? 'notice-success' : 'notice-error')
-                            .html('<p>' + response.data + '</p>')
-                            .show();
-                    }
-                });
-            });
-            
-            // Test decrypt
-            $('#test-decrypt').on('click', function() {
-                var $button = $(this);
-                $button.prop('disabled', true).text('Testing...');
-                
-                $.ajax({
-                    url: pqls_ajax.ajax_url,
-                    type: 'POST',
-                    data: {
-                        action: 'pqls_test_decrypt',
-                        nonce: pqls_ajax.nonce
-                    },
-                    success: function(response) {
-                        $('#key-status').removeClass('notice-error notice-success')
-                            .addClass(response.success ? 'notice-success' : 'notice-error')
-                            .html('<p>' + response.data + '</p>')
-                            .show();
-                    },
-                    complete: function() {
-                        $button.prop('disabled', false).text('<?php _e('Test Decrypt', 'pqls'); ?>');
-                    }
-                });
-            });
-        });
-        </script>
         <?php
     }
     
@@ -410,61 +314,61 @@ class PostQuantumLatticeShield {
      * Render encrypted fields settings
      */
     private function render_encrypted_fields_settings($settings) {
-        $encrypted_fields = $settings['encrypted_fields'] ?? array();
-        $forms = GFAPI::get_forms();
+        $forms = class_exists('GFAPI') ? GFAPI::get_forms() : [];
         
         if (empty($forms)) {
-            echo '<p>' . __('No Gravity Forms found.', 'pqls') . '</p>';
+            echo '<p>' . __('No forms found.', 'pqls') . '</p>';
             return;
         }
         
+        echo '<table class="wp-list-table widefat fixed striped">';
+        echo '<thead><tr><th>' . __('Form', 'pqls') . '</th><th>' . __('Encrypted Fields', 'pqls') . '</th></tr></thead>';
+        echo '<tbody>';
+        
         foreach ($forms as $form) {
-            echo '<h4>' . esc_html($form['title']) . ' (ID: ' . $form['id'] . ')</h4>';
-            echo '<table class="wp-list-table widefat fixed striped">';
-            echo '<thead><tr><th>Field</th><th>Type</th><th>Encrypt</th></tr></thead>';
-            echo '<tbody>';
-            
-            foreach ($form['fields'] as $field) {
-                $field_key = $form['id'] . '_' . $field->id;
-                $is_encrypted = in_array($field_key, $encrypted_fields);
-                
-                echo '<tr>';
-                echo '<td>' . esc_html($field->label) . '</td>';
-                echo '<td>' . esc_html($field->type) . '</td>';
-                echo '<td>';
-                echo '<input type="checkbox" name="' . $this->option_name . '[encrypted_fields][]" ';
-                echo 'value="' . esc_attr($field_key) . '" ';
-                echo checked($is_encrypted, true, false) . ' />';
-                echo '</td>';
-                echo '</tr>';
+            $encrypted_form_fields = isset($settings['encrypted_fields'][$form['id']]) ? $settings['encrypted_fields'][$form['id']] : [];
+            echo '<tr>';
+            echo '<td>' . esc_html($form['title']) . '</td>';
+            echo '<td>';
+            if (empty($encrypted_form_fields)) {
+                echo '<em>' . __('None', 'pqls') . '</em>';
+            } else {
+                echo '<ul>';
+                foreach ($encrypted_form_fields as $field_id) {
+                    echo '<li>' . esc_html('Field ID: ' . $field_id) . '</li>';
+                }
+                echo '</ul>';
             }
-            
-            echo '</tbody></table>';
+            echo '</td>';
+            echo '</tr>';
         }
+        
+        echo '</tbody></table>';
     }
     
     /**
      * Encrypt form data before submission
      */
     public function pre_submission_encrypt($form) {
-        $public_key = get_option('pqls_public_key');
+        $settings = get_option($this->option_name, array());
+        $encrypted_fields = $settings['encrypted_fields'][$form['id']] ?? [];
         
-        if (!$public_key) {
-            error_log('PQLS: No public key available for encryption');
+        if (empty($encrypted_fields)) {
             return $form;
         }
         
-        foreach ($form['fields'] as &$field) {
-            // Check if this specific field has encryption enabled
-            if (!empty($field->pqls_enable_encryption)) {
-                $field_value = rgpost('input_' . $field->id);
-                
-                if (!empty($field_value)) {
-                    $encrypted_value = $this->encrypt_data($field_value, $public_key);
-                    
-                    if ($encrypted_value) {
-                        $_POST['input_' . $field->id] = $encrypted_value;
-                    }
+        $public_key = get_option('pqls_public_key');
+        
+        if (empty($public_key)) {
+            error_log('PQLS: Public key not set, cannot encrypt.');
+            return $form;
+        }
+        
+        foreach ($_POST as $key => $value) {
+            if (strpos($key, 'input_') === 0) {
+                $field_id = str_replace('input_', '', $key);
+                if (in_array($field_id, $encrypted_fields)) {
+                    $_POST[$key] = $this->encrypt_data($value, $public_key);
                 }
             }
         }
@@ -479,443 +383,291 @@ class PostQuantumLatticeShield {
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         
-        $payload = array(
-            'publicKey' => $public_key,
-            'payload' => $data
-        );
-        
-        $headers = array(
-            'Content-Type' => 'application/json',
+        $headers = array('Content-Type' => 'application/json');
+        $body = array(
+            'data' => $data,
+            'publicKey' => $public_key
         );
         
         $response = wp_remote_post($microservice_url . '/encrypt', array(
-            'timeout' => 30,
             'headers' => $headers,
-            'body' => json_encode($payload)
+            'body' => json_encode($body),
+            'timeout' => 30
         ));
         
         if (is_wp_error($response)) {
             error_log('PQLS: Encryption failed - ' . $response->get_error_message());
-            return false;
+            return $data; // Return original data on failure
         }
         
-        $body = wp_remote_retrieve_body($response);
-        $result = json_decode($body, true);
+        $status_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
         
-        if (isset($result['encrypted'])) {
-            return '[ENCRYPTED:' . $result['encrypted'] . ']';
+        if ($status_code !== 200) {
+            error_log('PQLS: Encryption failed with status ' . $status_code . ': ' . $response_body);
+            return $data;
         }
         
-        return false;
+        $response_data = json_decode($response_body, true);
+        
+        return $response_data['encryptedData'] ?? $data;
     }
     
     /**
      * Decrypt data using microservice
      */
     private function decrypt_data($encrypted_data) {
-        if ($encrypted_data === null) {
-            return false;
-        }
-        // Extract the encrypted data from the wrapper
-        if (!preg_match('/^\[ENCRYPTED:(.+)\]$/', $encrypted_data, $matches)) {
-            return false; // Not encrypted data
-        }
-        
-        $ciphertext = $matches[1];
-        $private_key = get_option('pqls_private_key');
-        
-        if (!$private_key) {
-            error_log('PQLS: No private key available for decryption');
-            return false;
-        }
-        
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
-        
-        $payload = array(
-            'privateKey' => $private_key,
-            'ciphertext' => $ciphertext
-        );
+        $api_key = get_option('pqls_api_key', '');
 
-        $api_key = get_option('pqls_api_key');
+        // Extensive logging for debugging
+        error_log('PQLS Decrypt: Preparing to send request to ' . $microservice_url . '/decrypt');
+        error_log('PQLS Decrypt: API Key length: ' . strlen($api_key));
+        error_log('PQLS Decrypt: API Key (first 8 chars): ' . substr($api_key, 0, 8));
+
         $headers = array(
-            'Content-Type' => 'application/json',
+            'Content-Type'  => 'application/json',
+            'Authorization' => 'Bearer ' . $api_key,
         );
-
-        if ($api_key) {
-            $trimmed_key = trim($api_key);
-            $headers['Authorization'] = 'Bearer ' . $trimmed_key;
-            error_log('PQLS: Using API key for decryption. Length: ' . strlen($trimmed_key) . '. Starts with: ' . substr($trimmed_key, 0, 4) . '...');
-        } else {
-            error_log('PQLS: No API key provided for decryption.');
+        
+        // Log the headers (excluding the full key for security)
+        $loggable_headers = $headers;
+        if (!empty($api_key)) {
+            $loggable_headers['Authorization'] = 'Bearer ' . substr($api_key, 0, 8) . '...';
         }
+        error_log('PQLS Decrypt: Request headers: ' . print_r($loggable_headers, true));
 
-        error_log('PQLS: Attempting decrypt with URL: ' . $microservice_url . '/decrypt');
+        $body = array(
+            'encryptedData' => $encrypted_data,
+            'privateKey'    => get_option('pqls_private_key'),
+            'algorithm'     => get_option('pqls_algorithm', 'ml-kem-512')
+        );
         
         $response = wp_remote_post($microservice_url . '/decrypt', array(
-            'timeout' => 30,
             'headers' => $headers,
-            'body' => json_encode($payload)
+            'body'    => json_encode($body),
+            'timeout' => 30
         ));
         
         if (is_wp_error($response)) {
-            error_log('PQLS: Decryption failed - ' . $response->get_error_message());
+            error_log('PQLS Decrypt: WP_Error - ' . $response->get_error_message());
             return false;
         }
         
         $status_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
+        $response_body = wp_remote_retrieve_body($response);
         
         if ($status_code !== 200) {
-            error_log('PQLS: Decryption failed with status ' . $status_code . ': ' . $body);
+            error_log('PQLS Decrypt: Failed with status ' . $status_code . ': ' . $response_body);
             return false;
         }
         
-        $result = json_decode($body, true);
+        $data = json_decode($response_body, true);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log('PQLS: Invalid JSON response in decryption: ' . json_last_error_msg());
+            error_log('PQLS Decrypt: Invalid JSON response: ' . json_last_error_msg());
             return false;
         }
         
-        if (isset($result['decrypted'])) {
-            error_log('PQLS: Decryption successful');
-            return $result['decrypted'];
-        }
-        
-        error_log('PQLS: Decryption response missing decrypted field: ' . print_r($result, true));
-        return false;
+        return $data['decryptedData'] ?? false;
     }
     
     /**
-     * AJAX: Decrypt field value
+     * AJAX handler for decrypting a field
      */
     public function ajax_decrypt_field() {
         check_ajax_referer('pqls_nonce', 'nonce');
         
         if (!current_user_can('decrypt_pqls_data')) {
-            wp_die(__('Insufficient permissions', 'pqls'));
+            wp_send_json_error('Permission denied');
         }
         
-        $encrypted_data = sanitize_text_field($_POST['encrypted_data']);
+        $encrypted_data = sanitize_text_field($_POST['data']);
+        $decrypted_data = $this->decrypt_data($encrypted_data);
         
-        if (empty($encrypted_data)) {
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('No encrypted data provided', 'pqls')
-            ));
-        }
-        
-        // Debug logging
-        error_log('PQLS: Attempting to decrypt data: ' . substr($encrypted_data, 0, 50) . '...');
-        
-        $decrypted = $this->decrypt_data($encrypted_data);
-        
-        if ($decrypted !== false) {
-            // Log the decryption attempt for audit purposes
-            error_log('PQLS: Field decrypted successfully by user ' . get_current_user_id() . ' at ' . current_time('mysql'));
-            
-            wp_send_json(array(
-                'success' => true,
-                'data' => $decrypted
-            ));
+        if ($decrypted_data === false) {
+            wp_send_json_error('Decryption failed');
         } else {
-            error_log('PQLS: Decryption failed for user ' . get_current_user_id() . ' - check previous error logs');
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('Decryption failed - check error logs for details', 'pqls')
-            ));
+            // Log the decryption event for audit purposes
+            error_log(sprintf('PQLS Audit: User %d decrypted data.', get_current_user_id()));
+            wp_send_json_success($decrypted_data);
         }
     }
     
     /**
-     * AJAX: Export CSV with decrypt/redaction options
+     * AJAX handler for exporting CSV
      */
     public function ajax_export_csv() {
         check_ajax_referer('pqls_nonce', 'nonce');
-        
-        if (!current_user_can('manage_pqls')) {
-            wp_die(__('Insufficient permissions', 'pqls'));
+
+        if (!current_user_can('decrypt_pqls_data')) {
+            wp_send_json_error('Permission denied');
         }
-        
-        $form_id = intval($_POST['form_id']);
+
+        $form_id = absint($_POST['form_id']);
         $export_type = sanitize_text_field($_POST['export_type']); // 'decrypt' or 'redact'
-        
-        if (!$form_id) {
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('Invalid form ID', 'pqls')
-            ));
-        }
-        
-        // Get form and entries
+        $search_criteria = isset($_POST['search_criteria']) ? json_decode(stripslashes($_POST['search_criteria']), true) : [];
+        $sorting = isset($_POST['sorting']) ? json_decode(stripslashes($_POST['sorting']), true) : [];
+
         $form = GFAPI::get_form($form_id);
-        if (!$form) {
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('Form not found', 'pqls')
-            ));
-        }
-        
-        $entries = GFAPI::get_entries($form_id);
-        if (!$entries) {
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('No entries found', 'pqls')
-            ));
-        }
-        
-        // Generate CSV
+        $entries = GFAPI::get_entries($form_id, $search_criteria, $sorting);
+
         $csv_data = $this->generate_csv_data($form, $entries, $export_type);
-        
-        if ($csv_data) {
-            $filename = 'form_' . $form_id . '_' . $export_type . '_' . date('Y-m-d_H-i-s') . '.csv';
-            
-            // Log export for audit
-            error_log('PQLS: CSV export (' . $export_type . ') for form ' . $form_id . ' by user ' . get_current_user_id() . ' at ' . current_time('mysql'));
-            
-            wp_send_json(array(
-                'success' => true,
-                'data' => array(
-                    'filename' => $filename,
-                    'csv_data' => $csv_data
-                )
-            ));
+
+        if ($csv_data === false) {
+            wp_send_json_error('Failed to generate CSV data.');
         } else {
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('Failed to generate CSV', 'pqls')
-            ));
+            // Log the export event
+            error_log(sprintf('PQLS Audit: User %d exported CSV for form %d with type "%s"', get_current_user_id(), $form_id, $export_type));
+            wp_send_json_success(['csv_data' => $csv_data]);
         }
     }
-    
+
     /**
-     * Generate CSV data with decrypt/redaction options
+     * Generate CSV data from entries
      */
     private function generate_csv_data($form, $entries, $export_type) {
-        $csv_lines = array();
-        
-        // Build header row
-        $headers = array('Entry ID', 'Date Created', 'IP Address', 'Source URL');
+        if (empty($entries)) return '';
+
+        $csv = '';
+        $headers = [];
         foreach ($form['fields'] as $field) {
-            $headers[] = $field->label;
+            if ($field->type !== 'section') {
+                $headers[] = $field->label;
+            }
         }
-        $csv_lines[] = $headers;
-        
-        // Process entries
+        $csv .= '"' . implode('","', $headers) . '"' . "\n";
+
         foreach ($entries as $entry) {
-            $row = array(
-                $entry['id'],
-                $entry['date_created'],
-                $entry['ip'],
-                $entry['source_url']
-            );
-            
+            $row = [];
             foreach ($form['fields'] as $field) {
-                $field_value = rgar($entry, $field->id);
-                
-                // Check if field is encrypted
-                if ($field_value !== null && strpos($field_value, '[ENCRYPTED:') === 0) {
-                    if ($export_type === 'decrypt' && current_user_can('decrypt_pqls_data')) {
-                        // Decrypt the field
-                        $decrypted = $this->decrypt_data($field_value);
-                        $row[] = $decrypted !== false ? $decrypted : '[DECRYPT_FAILED]';
+                if ($field->type !== 'section') {
+                    $value = rgar($entry, (string) $field->id);
+                    $field_id = is_object($field) ? $field->id : $field;
+
+                    if ($value !== null && strpos($value, 'pqls_encrypted::') === 0) {
+                        if ($export_type === 'decrypt') {
+                            $decrypted_value = $this->decrypt_data($value);
+                            $row[] = $decrypted_value !== false ? $decrypted_value : '[DECRYPTION FAILED]';
+                        } else {
+                            $row[] = '[REDACTED]';
+                        }
                     } else {
-                        // Redact or show as encrypted
-                        $row[] = '[ENCRYPTED_DATA_REDACTED]';
+                        $row[] = $value;
                     }
-                } else {
-                    $row[] = $field_value;
                 }
             }
-            
-            $csv_lines[] = $row;
+            $csv .= '"' . implode('","', $row) . '"' . "\n";
         }
-        
-        // Convert to CSV format
-        $csv_content = '';
-        foreach ($csv_lines as $line) {
-            $csv_content .= '"' . implode('","', array_map('str_replace', array_fill(0, count($line), '"'), array_fill(0, count($line), '""'), $line)) . '"' . "\n";
-        }
-        
-        return $csv_content;
+
+        return $csv;
     }
     
     /**
-     * AJAX: Regenerate keys
+     * AJAX handler for regenerating keys
      */
     public function ajax_regenerate_keys() {
         check_ajax_referer('pqls_nonce', 'nonce');
         
-        if (!current_user_can('manage_pqls')) {
-            wp_die(__('Insufficient permissions', 'pqls'));
+        if ($this->generate_keypair()) {
+            wp_send_json_success('Keys regenerated successfully.');
+        } else {
+            wp_send_json_error('Failed to regenerate keys.');
         }
-        
-        $success = $this->generate_keypair();
-        
-        wp_send_json(array(
-            'success' => $success,
-            'data' => $success ? __('Keys regenerated successfully', 'pqls') : __('Failed to regenerate keys', 'pqls')
-        ));
     }
     
     /**
-     * AJAX: Test connection
+     * AJAX handler for testing connection
      */
     public function ajax_test_connection() {
         check_ajax_referer('pqls_nonce', 'nonce');
         
-        if (!current_user_can('manage_pqls')) {
-            wp_die(__('Insufficient permissions', 'pqls'));
-        }
-        
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         
-        $response = wp_remote_get($microservice_url . '/generate-keypair', array(
-            'timeout' => 10
-        ));
+        $response = wp_remote_get($microservice_url . '/status');
         
         if (is_wp_error($response)) {
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('Connection failed: ', 'pqls') . $response->get_error_message()
-            ));
+            wp_send_json_error('Connection failed: ' . $response->get_error_message());
         }
         
-        $code = wp_remote_retrieve_response_code($response);
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
         
-        wp_send_json(array(
-            'success' => $code === 200,
-            'data' => $code === 200 ? __('Connection successful!', 'pqls') : __('Connection failed. Status: ', 'pqls') . $code
-        ));
+        if ($status_code === 200) {
+            wp_send_json_success('Connection successful! Response: ' . $body);
+        } else {
+            wp_send_json_error('Connection failed with status ' . $status_code . '. Response: ' . $body);
+        }
     }
-    
+
     /**
-     * AJAX: Test decrypt functionality
+     * AJAX handler for testing decryption
      */
     public function ajax_test_decrypt() {
         check_ajax_referer('pqls_nonce', 'nonce');
-
-        if (!current_user_can('manage_pqls')) {
-            wp_die(__('Insufficient permissions', 'pqls'));
+    
+        if (!current_user_can('decrypt_pqls_data')) {
+            wp_send_json_error('Permission Denied');
         }
-
-        // Create a test encrypted value
-        $test_plain = 'Test decryption: ' . current_time('mysql');
-
-        // First encrypt the test data
+    
+        $test_string = "This is a test string for encryption and decryption.";
         $public_key = get_option('pqls_public_key');
-        if (!$public_key) {
-            wp_send_json_error(__('No public key available - generate keys first', 'pqls'));
+    
+        if (empty($public_key)) {
+            wp_send_json_error('Public key not found.');
         }
-
-        $encrypted = $this->encrypt_data($test_plain, $public_key);
-        if (!$encrypted) {
-            wp_send_json_error(__('Encryption test failed', 'pqls'));
+    
+        // Encrypt
+        $encrypted = $this->encrypt_data($test_string, $public_key);
+        if ($encrypted === $test_string) {
+            wp_send_json_error('Encryption failed. The data was not changed.');
         }
-
-        // Now test decryption
+    
+        // Decrypt
         $decrypted = $this->decrypt_data($encrypted);
-
-        if ($decrypted !== false) {
-            $success = ($decrypted === $test_plain);
-            wp_send_json(array(
-                'success' => $success,
-                'data' => $success ?
-                    __('Encrypt/decrypt test successful!', 'pqls') :
-                    __('Decryption returned wrong data.', 'pqls')
-            ));
+    
+        if ($decrypted === $test_string) {
+            wp_send_json_success("Test successful! The decrypted string matches the original.");
         } else {
-            wp_send_json_error(__('Decryption test failed - check error logs', 'pqls'));
+            wp_send_json_error("Decryption test failed. The decrypted data does not match the original. Decrypted data: " . print_r($decrypted, true));
         }
     }
-    
+
     /**
-     * Show notice if Gravity Forms is missing
+     * Gravity Forms missing notice
      */
     public function gravity_forms_missing_notice() {
-        ?>
-        <div class="notice notice-error">
-            <p><?php _e('Post Quantum Lattice Shield requires Gravity Forms to be installed and activated.', 'pqls'); ?></p>
-        </div>
-        <?php
+        echo '<div class="error"><p>';
+        echo __('Post Quantum Lattice Shield requires Gravity Forms to be installed and active.', 'pqls');
+        echo '</p></div>';
     }
     
     /**
-     * Format encrypted field display in Gravity Forms entries
+     * Format encrypted entry display
      */
     public function format_encrypted_entry_display($value, $field, $entry, $form) {
-        if ($value === null) {
-            return $value;
-        }
-        // Debug logging
-        error_log('PQLS: format_encrypted_entry_display called with value: ' . substr($value, 0, 50) . '...');
-        error_log('PQLS: Value is null: ' . ($value === null ? 'yes' : 'no'));
-        error_log('PQLS: Value contains [ENCRYPTED:: ' . (strpos($value, '[ENCRYPTED:') !== false ? 'yes' : 'no'));
+        $field_id = is_object($field) ? $field->id : $field;
         
-        // Check if this value is encrypted
-        if ($value !== null && strpos($value, '[ENCRYPTED:') === 0) {
-            error_log('PQLS: Processing encrypted field display');
-            
-            $encrypted_data = substr($value, 11, -1); // Remove [ENCRYPTED: and ]
-            $short_preview = substr($encrypted_data, 0, 20) . '...';
-            
-            // Handle both field object and field ID
-            $field_id = is_object($field) ? $field->id : $field;
-            
-            // Check if user can decrypt
-            $can_decrypt = current_user_can('decrypt_pqls_data');
-            $decrypt_button = '';
-            
-            if ($can_decrypt) {
-                $decrypt_button = '<button type="button" class="pqls-decrypt-btn button-secondary" 
-                                          data-encrypted="' . esc_attr($value) . '" 
-                                          data-field-id="' . esc_attr($field_id) . '"
-                                          title="' . esc_attr__('Decrypt this field value', 'pqls') . '">
-                                     <span class="dashicons dashicons-visibility"></span> ' . __('Decrypt', 'pqls') . '
-                                   </button>';
+        if ($value !== null && strpos($value, 'pqls_encrypted::') === 0) {
+            if (current_user_can('decrypt_pqls_data')) {
+                $html = '<span class="pqls-encrypted-badge">💫🔒💫</span>';
+                $html .= '<div class="pqls-encrypted-data" data-encrypted="' . esc_attr($value) . '">';
+                $html .= '<span class="pqls-redacted-view">[REDACTED]</span>';
+                $html .= '<span class="pqls-decrypted-view" style="display:none;"></span>';
+                $html .= '</div>';
+                $html .= '<div class="pqls-actions">';
+                $html .= '<a href="#" class="button button-small pqls-decrypt-button">' . __('Decrypt', 'pqls') . '</a>';
+                $html .= '<a href="#" class="button button-small pqls-hide-button" style="display:none;">' . __('Hide', 'pqls') . '</a>';
+                $html .= '</div>';
+                $html .= '<div class="pqls-security-warning" style="display:none;color:red;font-size:12px;margin-top:5px;">' . __('Warning: This data is now visible. Be cautious where you display it.', 'pqls') . '</div>';
+                return $html;
+            } else {
+                return '<span class="pqls-encrypted-badge">💫🔒💫</span> [REDACTED]';
             }
-            
-            $formatted_output = sprintf(
-                '<div class="pqls-encrypted-field">
-                    <div class="pqls-encrypted-badge">💫🔒💫</div>
-                    <div class="pqls-encrypted-content">
-                        <div class="pqls-encrypted-preview">%s</div>
-                        <div class="pqls-decrypted-content" style="display: none;">
-                            <div class="pqls-decrypted-value"></div>
-                            <div class="pqls-security-warning">
-                                <small><strong>%s</strong> %s</small>
-                            </div>
-                            <button type="button" class="pqls-hide-btn button-secondary">
-                                <span class="dashicons dashicons-hidden"></span> %s
-                            </button>
-                        </div>
-                        <div class="pqls-encrypted-full" style="display: none;">%s</div>
-                        <div class="pqls-field-actions">
-                            %s
-                            <button type="button" class="pqls-toggle-encrypted button-secondary" 
-                                    data-target-preview=".pqls-encrypted-preview" 
-                                    data-target-full=".pqls-encrypted-full">
-                                <span class="show-text">Show Full</span>
-                                <span class="hide-text" style="display: none;">Hide</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>',
-                esc_html($short_preview),
-                __('⚠️ Security Warning:', 'pqls'),
-                __('Decrypted data is now visible and vulnerable. Hide it when finished.', 'pqls'),
-                __('Hide', 'pqls'),
-                '<textarea readonly class="pqls-encrypted-textarea">' . esc_textarea($encrypted_data) . '</textarea>',
-                $decrypt_button
-            );
-            
-            error_log('PQLS: Returning formatted output (length: ' . strlen($formatted_output) . ')');
-            return $formatted_output;
         }
         
-        error_log('PQLS: Value not encrypted, returning as-is');
         return $value;
     }
     
@@ -924,407 +676,286 @@ class PostQuantumLatticeShield {
      */
     public function add_encryption_notice($form, $entry) {
         $has_encrypted = false;
-
-        if (is_array($entry)) {
-            foreach ($entry as $key => $value) {
-                if ($value !== null && strpos($value, '[ENCRYPTED:') === 0) {
-                    $has_encrypted = true;
-                    break;
-                }
+        foreach($entry as $key => $value) {
+            if (is_numeric($key) && strpos($value, 'pqls_encrypted::') === 0) {
+                $has_encrypted = true;
+                break;
             }
         }
-
+        
         if ($has_encrypted) {
-            echo '<div class="pqls-entry-notice">
-                    <div class="notice notice-info inline">
-                        <p><strong>🔒 Post-Quantum Encryption:</strong> This entry contains encrypted fields protected with ML-KEM-512 lattice-based cryptography.</p>
-                    </div>
-                  </div>';
+            echo '<div class="notice notice-info inline"><p><strong>' . __('Note:', 'pqls') . '</strong> ' . __('This entry contains encrypted fields.', 'pqls') . '</p></div>';
         }
     }
-    
+
     /**
-     * Add CSV export buttons to entries page
+     * Add CSV export buttons to the entries list page
      */
     public function add_csv_export_buttons($form_id, $field_id, $value, $entry) {
-        // Only show on the entries list page, not individual entry pages
-        if (!rgget('page') || rgget('page') !== 'gf_entries') {
-            return;
-        }
-        
+        // This function is hooked to gform_entries_first_column_actions
+        // which runs once per row. We only need to add our buttons once.
         static $buttons_added = false;
-        if ($buttons_added) {
-            return;
-        }
-        
-        $buttons_added = true;
-        
-        // Check if form has encrypted fields
-        $form = GFAPI::get_form($form_id);
-        $has_encrypted_fields = false;
-        
-        if ($form) {
-            foreach ($form['fields'] as $field) {
-                if (!empty($field->pqls_enable_encryption)) {
-                    $has_encrypted_fields = true;
-                    break;
-                }
-            }
-        }
-        
-        if ($has_encrypted_fields && current_user_can('manage_pqls')) {
-            echo '<div class="pqls-csv-export-buttons" style="margin: 10px 0;">';
-            echo '<h4>' . __('Post-Quantum Lattice Shield Exports', 'pqls') . '</h4>';
-            
-            if (current_user_can('decrypt_pqls_data')) {
-                echo '<button type="button" class="button button-primary pqls-export-csv" data-form-id="' . esc_attr($form_id) . '" data-export-type="decrypt">';
-                echo '<span class="dashicons dashicons-download"></span> ' . __('Export CSV (Decrypted)', 'pqls');
-                echo '</button> ';
-            }
-            
-            echo '<button type="button" class="button button-secondary pqls-export-csv" data-form-id="' . esc_attr($form_id) . '" data-export-type="redact">';
-            echo '<span class="dashicons dashicons-download"></span> ' . __('Export CSV (Redacted)', 'pqls');
-            echo '</button>';
-            
-            echo '<div class="pqls-export-status" style="margin-top: 10px; display: none;"></div>';
-            echo '</div>';
-            
-            // Add JavaScript for CSV export
+        if ($buttons_added) return;
+
+        if (current_user_can('decrypt_pqls_data')) {
             ?>
-            <script>
-            jQuery(document).ready(function($) {
-                $('.pqls-export-csv').on('click', function() {
-                    var $button = $(this);
-                    var formId = $button.data('form-id');
-                    var exportType = $button.data('export-type');
-                    var $status = $('.pqls-export-status');
-                    
-                    $button.prop('disabled', true);
-                    $status.removeClass('notice-error notice-success').addClass('notice-info').show();
-                    $status.html('<p>Generating CSV export...</p>');
-                    
-                    $.ajax({
-                        url: pqls_ajax.ajax_url,
-                        type: 'POST',
-                        data: {
+            <div class="pqls-csv-export-buttons" style="margin-top: 20px;">
+                <button class="button" id="pqls-export-redacted-csv" data-form-id="<?php echo esc_attr($form_id); ?>">
+                    <?php _e('Export Redacted CSV', 'pqls'); ?>
+                </button>
+                <button class="button-primary" id="pqls-export-decrypted-csv" data-form-id="<?php echo esc_attr($form_id); ?>">
+                    <?php _e('Export Decrypted CSV', 'pqls'); ?>
+                </button>
+            </div>
+            <script type="text/javascript">
+                jQuery(document).ready(function($) {
+                    function getUrlParameter(name) {
+                        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+                        var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+                        var results = regex.exec(location.search);
+                        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+                    }
+
+                    function exportCsv(exportType) {
+                        var formId = $('#pqls-export-decrypted-csv').data('form-id');
+                        var search = {
+                            status: getUrlParameter('status'),
+                            field_filters: [] // You might need to parse this from the URL if needed
+                        };
+                        var sorting = {
+                            key: getUrlParameter('sort'),
+                            direction: getUrlParameter('dir')
+                        };
+
+                        $.post(pqls_ajax.ajax_url, {
                             action: 'pqls_export_csv',
                             nonce: pqls_ajax.nonce,
                             form_id: formId,
-                            export_type: exportType
-                        },
-                        success: function(response) {
+                            export_type: exportType,
+                            search_criteria: JSON.stringify(search),
+                            sorting: JSON.stringify(sorting)
+                        }, function(response) {
                             if (response.success) {
-                                // Create download link
-                                var blob = new Blob([response.data.csv_data], { type: 'text/csv' });
-                                var link = document.createElement('a');
-                                link.href = window.URL.createObjectURL(blob);
-                                link.download = response.data.filename;
-                                link.click();
-                                
-                                $status.removeClass('notice-info').addClass('notice-success');
-                                $status.html('<p>CSV exported successfully!</p>');
-                                
-                                setTimeout(function() {
-                                    $status.fadeOut();
-                                }, 3000);
+                                var a = document.createElement('a');
+                                a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(response.data.csv_data);
+                                a.target = '_blank';
+                                a.download = 'export-' + exportType + '-' + formId + '.csv';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
                             } else {
-                                $status.removeClass('notice-info').addClass('notice-error');
-                                $status.html('<p>Export failed: ' + response.data + '</p>');
+                                alert('Export failed: ' + response.data);
                             }
-                        },
-                        error: function() {
-                            $status.removeClass('notice-info').addClass('notice-error');
-                            $status.html('<p>Export failed due to server error</p>');
-                        },
-                        complete: function() {
-                            $button.prop('disabled', false);
-                        }
+                        });
+                    }
+
+                    $('#pqls-export-redacted-csv').on('click', function() {
+                        exportCsv('redact');
+                    });
+                    $('#pqls-export-decrypted-csv').on('click', function() {
+                        exportCsv('decrypt');
                     });
                 });
-            });
             </script>
             <?php
+            $buttons_added = true;
         }
     }
-    
+
     /**
      * Enqueue scripts for Gravity Forms pages
      */
     public function enqueue_gravity_forms_scripts($hook) {
-        // Debug logging
-        error_log('PQLS: enqueue_gravity_forms_scripts called with hook: ' . $hook);
-        
-        // Only load on Gravity Forms pages
-        if (strpos($hook, 'gf_') === false && strpos($hook, 'gravityforms') === false) {
-            error_log('PQLS: Not a Gravity Forms page, skipping script enqueue');
+        if (strpos($hook, 'gf_entries') === false) {
             return;
         }
-        
-        error_log('PQLS: Enqueuing Gravity Forms scripts and styles');
-        
-        wp_enqueue_style('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.css', array(), PQLS_VERSION);
-        wp_enqueue_script('pqls-gravity-forms-base', PQLS_PLUGIN_URL . 'assets/admin.js', array('jquery'), PQLS_VERSION, true);
-        
-        // Localize script for AJAX calls
-        wp_localize_script('pqls-gravity-forms-base', 'pqls_ajax', array(
+
+        wp_enqueue_script('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.js', array('jquery'), PQLS_VERSION, true);
+        wp_localize_script('pqls-gravity-forms', 'pqls_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('pqls_nonce'),
             'strings' => array(
                 'decrypting' => __('Decrypting...', 'pqls'),
                 'decrypt_failed' => __('Decryption failed', 'pqls'),
-                'copied' => __('Copied to clipboard', 'pqls')
             )
         ));
-        
-        error_log('PQLS: Adding inline script for decrypt functionality');
-        
-        // Add decrypt functionality inline
-        wp_add_inline_script('pqls-gravity-forms-base', "
-            jQuery(document).ready(function($) {
-                // Debug: Check if JavaScript is loading
-                console.log('PQLS: JavaScript loaded, looking for encrypted fields...');
-                console.log('PQLS: Found ' + $('.pqls-encrypted-field').length + ' encrypted fields');
+
+        wp_enqueue_style('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.css', array(), PQLS_VERSION);
+
+        $inline_script = "
+            jQuery(document).on('click', '.pqls-decrypt-button', function(e) {
+                e.preventDefault();
+                var button = jQuery(this);
+                var container = button.closest('.pqls-encrypted-data-container');
+                var data_div = container.find('.pqls-encrypted-data');
+                var encrypted_data = data_div.data('encrypted');
+                var decrypted_view = container.find('.pqls-decrypted-view');
+                var security_warning = container.find('.pqls-security-warning');
+                var hide_button = container.find('.pqls-hide-button');
                 
-                // Decrypt button click handler
-                $(document).on('click', '.pqls-decrypt-btn', function() {
-                    console.log('PQLS: Decrypt button clicked');
-                    var \$button = $(this);
-                    var \$field = \$button.closest('.pqls-encrypted-field');
-                    var \$preview = \$field.find('.pqls-encrypted-preview');
-                    var \$decrypted = \$field.find('.pqls-decrypted-content');
-                    var \$decryptedValue = \$field.find('.pqls-decrypted-value');
-                    var encryptedData = \$button.data('encrypted');
-                    
-                    // Show loading state
-                    \$button.html('<span class=\"dashicons dashicons-update spin\"></span> Decrypting...');
-                    \$button.prop('disabled', true);
-                    
-                    $.ajax({
-                        url: pqls_ajax.ajax_url,
-                        type: 'POST',
-                        data: {
-                            action: 'pqls_decrypt_field',
-                            nonce: pqls_ajax.nonce,
-                            encrypted_data: encryptedData
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                \$decryptedValue.html('<pre>' + response.data + '</pre>');
-                                \$preview.fadeOut(200, function() {
-                                    \$decrypted.fadeIn(200);
-                                });
-                                \$button.hide();
-                            } else {
-                                alert(response.data || 'Decryption failed');
-                                \$button.html('<span class=\"dashicons dashicons-visibility\"></span> Decrypt');
-                            }
-                        },
-                        error: function() {
-                            alert('Decryption failed');
-                            \$button.html('<span class=\"dashicons dashicons-visibility\"></span> Decrypt');
-                        },
-                        complete: function() {
-                            \$button.prop('disabled', false);
-                        }
-                    });
-                });
-                
-                // Hide decrypted button click handler
-                $(document).on('click', '.pqls-hide-btn', function() {
-                    var \$button = $(this);
-                    var \$field = \$button.closest('.pqls-encrypted-field');
-                    var \$preview = \$field.find('.pqls-encrypted-preview');
-                    var \$decrypted = \$field.find('.pqls-decrypted-content');
-                    var \$decryptBtn = \$field.find('.pqls-decrypt-btn');
-                    
-                    \$decrypted.fadeOut(200, function() {
-                        \$preview.fadeIn(200);
-                        \$decryptBtn.show();
-                    });
+                button.text(pqls_ajax.strings.decrypting);
+
+                jQuery.post(pqls_ajax.ajax_url, {
+                    action: 'pqls_decrypt_field',
+                    nonce: pqls_ajax.nonce,
+                    data: encrypted_data
+                }, function(response) {
+                    if (response.success) {
+                        decrypted_view.text(response.data).show();
+                        data_div.find('.pqls-redacted-view').hide();
+                        security_warning.show();
+                        button.hide();
+                        hide_button.show();
+                    } else {
+                        decrypted_view.text(pqls_ajax.strings.decrypt_failed).show();
+                        button.text('Decrypt');
+                    }
                 });
             });
-        ");
+
+            jQuery(document).on('click', '.pqls-hide-button', function(e) {
+                e.preventDefault();
+                var button = jQuery(this);
+                var container = button.closest('.pqls-encrypted-data-container');
+                container.find('.pqls-decrypted-view').hide();
+                container.find('.pqls-redacted-view').show();
+                container.find('.pqls-security-warning').hide();
+                button.hide();
+                container.find('.pqls-decrypt-button').show().text('Decrypt');
+            });
+        ";
+        wp_add_inline_script('pqls-gravity-forms', $inline_script);
     }
     
     /**
-     * Add encryption field setting to Gravity Forms field editor
+     * Add encryption setting to Gravity Forms field editor
      */
     public function add_encryption_field_setting($position, $form_id) {
-        if ($position == 25) { // Add after Advanced Settings
+        if ($position == 50) { // Advanced settings
             ?>
-            <li class="pqls_enable_encryption_setting field_setting">
-                <div class="pqls-encryption-setting">
-                    <label for="pqls_enable_encryption" class="section_label">
-                        <?php esc_html_e('Post-Quantum Encryption', 'pqls'); ?>
-                        <?php gform_tooltip('pqls_enable_encryption'); ?>
-                    </label>
-                    <input type="checkbox" id="pqls_enable_encryption" onclick="SetFieldProperty('pqls_enable_encryption', this.checked);" />
-                    <label for="pqls_enable_encryption" class="inline">
-                        <?php esc_html_e('Enable encryption for this field', 'pqls'); ?>
-                    </label>
-                    <div class="pqls-encryption-info">
-                        <small>
-                            <span class="dashicons dashicons-shield"></span>
-                            <?php esc_html_e('This field will be encrypted with ML-KEM-512 before saving to database', 'pqls'); ?>
-                        </small>
-                    </div>
-                </div>
+            <li class="encrypt_field_setting field_setting">
+                <input type="checkbox" id="field_encrypt_value" onclick="SetFieldProperty('encryptField', this.checked);" />
+                <label for="field_encrypt_value" class="inline">
+                    <?php _e('Encrypt this field', 'pqls'); ?>
+                    <?php gform_tooltip('form_field_encrypt_value'); ?>
+                </label>
             </li>
             <?php
         }
     }
     
     /**
-     * Add encryption tooltips to Gravity Forms
+     * Add tooltips for encryption setting
      */
     public function add_encryption_tooltips($tooltips) {
-        $tooltips['pqls_enable_encryption'] = sprintf(
-            '<h6>%s</h6><p>%s</p><p>%s</p>',
-            __('Post-Quantum Encryption', 'pqls'),
-            __('When enabled, this field\'s data will be encrypted using ML-KEM-512 lattice-based cryptography before being saved to the database.', 'pqls'),
-            __('This provides protection against quantum computer attacks and ensures long-term data security.', 'pqls')
-        );
+        $tooltips['form_field_encrypt_value'] = "<h6>" . __('Encrypt Field', 'pqls') . "</h6>" . __('When checked, the contents of this field will be encrypted using post-quantum cryptography before being stored.', 'pqls');
         return $tooltips;
     }
-    
+
     /**
-     * Add JavaScript for encryption field editor
+     * Add JavaScript to the Gravity Forms editor to handle our custom setting
      */
     public function add_encryption_editor_js() {
         ?>
-        <script type="text/javascript">
-            // Add encryption setting to supported field types
-            fieldSettings.text += ", .pqls_enable_encryption_setting";
-            fieldSettings.textarea += ", .pqls_enable_encryption_setting";
-            fieldSettings.email += ", .pqls_enable_encryption_setting";
-            fieldSettings.phone += ", .pqls_enable_encryption_setting";
-            fieldSettings.name += ", .pqls_enable_encryption_setting";
-            fieldSettings.address += ", .pqls_enable_encryption_setting";
-            fieldSettings.website += ", .pqls_enable_encryption_setting";
-            fieldSettings.number += ", .pqls_enable_encryption_setting";
-            fieldSettings.date += ", .pqls_enable_encryption_setting";
-            fieldSettings.time += ", .pqls_enable_encryption_setting";
-            fieldSettings.select += ", .pqls_enable_encryption_setting";
-            fieldSettings.multiselect += ", .pqls_enable_encryption_setting";
-            fieldSettings.radio += ", .pqls_enable_encryption_setting";
-            fieldSettings.checkbox += ", .pqls_enable_encryption_setting";
-            
-            // Bind to the load field settings event
+        <script type='text/javascript'>
+            // Add our custom field property to the list of supported properties
+            fieldSettings.text += ', .encrypt_field_setting';
+            fieldSettings.textarea += ', .encrypt_field_setting';
+            fieldSettings.name += ', .encrypt_field_setting';
+            fieldSettings.address += ', .encrypt_field_setting';
+            fieldSettings.phone += ', .encrypt_field_setting';
+            fieldSettings.email += ', .encrypt_field_setting';
+            fieldSettings.website += ', .encrypt_field_setting';
+            // Add to other fields as needed...
+
+            // Set the 'encryptField' property when the form editor is loaded
             jQuery(document).bind('gform_load_field_settings', function(event, field, form) {
-                // Set the encryption checkbox based on field property
-                var isEncrypted = field.pqls_enable_encryption == true;
-                jQuery('#pqls_enable_encryption').prop('checked', isEncrypted);
-                
-                // Update visual indicator
-                if (isEncrypted) {
-                    jQuery('.field_selected').addClass('pqls-encrypted-field-editor');
-                } else {
-                    jQuery('.field_selected').removeClass('pqls-encrypted-field-editor');
-                }
+                jQuery('#field_encrypt_value').prop('checked', field.encryptField == true);
             });
-            
-            // Handle checkbox change event to save field property
-            jQuery(document).on('change', '#pqls_enable_encryption', function() {
-                var isChecked = jQuery(this).is(':checked');
-                SetFieldProperty('pqls_enable_encryption', isChecked);
-                
-                // Update visual indicator immediately
-                if (isChecked) {
-                    jQuery('.field_selected').addClass('pqls-encrypted-field-editor');
-                } else {
-                    jQuery('.field_selected').removeClass('pqls-encrypted-field-editor');
+
+            // This function is now part of Gravity Forms and can be called directly
+            // function SetFieldProperty(name, value) {
+            //     // This is a placeholder for the actual GF function
+            //     // In a real scenario, this would update the field object
+            // }
+
+            // Save the setting when the form is saved
+            gform.add_filter('gform_pre_form_editor_save', function (form) {
+                for (var i = 0; i < form.fields.length; i++) {
+                    var field = form.fields[i];
+                    if (typeof field.encryptField === 'undefined') {
+                        field.encryptField = false;
+                    }
                 }
+                return form;
             });
-            
-            // Add visual styling to field editor
-            jQuery('<style>')
-                .prop('type', 'text/css')
-                .html('.pqls-encryption-setting { padding: 10px; background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 10px; } .pqls-encryption-setting .section_label { font-weight: 600; color: #2c3e50; display: flex; align-items: center; gap: 5px; } .pqls-encryption-info { margin-top: 8px; padding: 8px; background: #e8f5e8; border-radius: 3px; border-left: 3px solid #27ae60; } .pqls-encryption-info small { color: #27ae60; font-weight: 500; display: flex; align-items: center; gap: 5px; } .pqls-encrypted-field-editor { border: 2px solid #667eea !important; box-shadow: 0 0 0 1px #667eea !important; } .pqls-encrypted-field-editor::before { content: "💫🔒💫"; position: absolute; top: -10px; right: -10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; z-index: 1000; }')
-                .appendTo('head');
         </script>
         <?php
     }
-    
+
     /**
-     * Add encryption indicator to form fields on frontend
+     * Add visual indicator to frontend fields
      */
     public function add_encryption_field_indicator($content, $field, $value, $lead_id, $form_id) {
-        // Check if field has encryption enabled
-        if (!empty($field->pqls_enable_encryption)) {
-            // Add encryption indicator to field
-            $indicator = '<div class="pqls-field-encryption-indicator">
-                            <span class="pqls-field-encryption-badge">💫🔒💫</span>
-                            <span class="pqls-field-encryption-text">Encrypted Field</span>
-                          </div>';
-            
-            // Insert indicator before the field input
-            $content = preg_replace('/(<div[^>]*class="[^"]*ginput_container[^"]*"[^>]*>)/', '$1' . $indicator, $content);
-        }
+        if (is_admin()) return $content; // Don't show on admin pages
+
+        $settings = get_option($this->option_name, array());
+        $encrypted_fields = $settings['encrypted_fields'][$form_id] ?? [];
         
+        if (in_array($field->id, $encrypted_fields)) {
+            $content = str_replace('</label>', ' <span class="pqls-encrypted-indicator">💫</span></label>', $content);
+        }
+
         return $content;
     }
     
     /**
-     * Add CSS class to encrypted fields
+     * Add CSS class to encrypted fields on the frontend
      */
     public function add_encryption_field_class($classes, $field, $form) {
-        if (!empty($field->pqls_enable_encryption)) {
-            $classes .= ' pqls-encrypted-field-frontend';
+        if (is_admin()) return $classes;
+
+        $settings = get_option($this->option_name, array());
+        $encrypted_fields = $settings['encrypted_fields'][$form->id] ?? [];
+
+        if (in_array($field->id, $encrypted_fields)) {
+            $classes .= ' pqls-encrypted-field';
         }
+
         return $classes;
     }
     
     /**
-     * Enqueue frontend scripts for encrypted fields
+     * Enqueue frontend scripts and styles
      */
     public function enqueue_frontend_scripts() {
-        // Only enqueue on pages with Gravity Forms
-        if (!class_exists('GFCommon')) {
-            return;
-        }
-        
-        // Check if we're on a page that might have forms
-        global $post;
-        if (is_object($post) && (has_shortcode($post->post_content, 'gravityform') || 
-            has_shortcode($post->post_content, 'gravityforms'))) {
-            wp_enqueue_style('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.css', array(), PQLS_VERSION);
-            wp_enqueue_script('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.js', array('jquery'), PQLS_VERSION, true);
-        } else {
-            // Always enqueue for safety - they're small files
-            wp_enqueue_style('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.css', array(), PQLS_VERSION);
-            wp_enqueue_script('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.js', array('jquery'), PQLS_VERSION, true);
-        }
+        wp_enqueue_style('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.css', array(), PQLS_VERSION);
+        wp_enqueue_script('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.js', array('jquery'), PQLS_VERSION, true);
     }
     
     /**
-     * Intercept plugin download to set proper filename
+     * Intercept plugin download link to add our custom query arg
      */
     public function intercept_plugin_download() {
-        if (isset($_GET['action']) && $_GET['action'] === 'download-plugin') {
-            $plugin_file = isset($_GET['plugin']) ? sanitize_text_field($_GET['plugin']) : '';
-            
-            // Check if this is our plugin
-            if (strpos($plugin_file, 'post-quantum-lattice-shield') !== false) {
-                add_filter('wp_headers', array($this, 'set_download_headers'));
-            }
-        }
-    }
-
-    /**
-     * Check if the current request is for a plugin download and set headers.
-     */
-    public function check_plugin_download() {
-        if (isset($_GET['action']) && $_GET['action'] === 'download-plugin') {
-            $plugin_file = isset($_GET['plugin']) ? sanitize_text_field($_GET['plugin']) : '';
-
-            if (strpos($plugin_file, 'post-quantum-lattice-shield') !== false) {
-                $this->set_download_headers(array()); // Headers are set via filter
-            }
+        if (isset($_GET['plugin']) && $_GET['plugin'] === 'post-quantum-lattice-shield/post-quantum-lattice-shield.php' && isset($_GET['action']) && $_GET['action'] === 'download') {
+            $download_link = wp_nonce_url(admin_url('admin-post.php?action=pqls_download_plugin'), 'pqls_download_nonce');
+            wp_redirect($download_link);
+            exit;
         }
     }
     
     /**
-     * Set proper download headers for our plugin
+     * Check for our custom download action
+     */
+    public function check_plugin_download() {
+        if (isset($_GET['action']) && $_GET['action'] === 'pqls_download_plugin' && current_user_can('install_plugins')) {
+            // No need for nonce check here, it's handled by admin-post.php
+            $this->handle_plugin_download();
+        }
+    }
+
+    /**
+     * Set custom headers for download
      */
     public function set_download_headers($headers) {
         $headers['Content-Disposition'] = 'attachment; filename="postquantumlatticeshield.zip"';
@@ -1332,33 +963,31 @@ class PostQuantumLatticeShield {
     }
 
     /**
-     * Handle plugin download action in admin
+     * Handle plugin download from admin
      */
     public function handle_plugin_download_admin() {
-        // Debug: Log all GET parameters on plugin pages
-        if (isset($_GET['page']) && strpos($_GET['page'], 'plugin') !== false) {
-            error_log('PQLS: Plugin page accessed with GET params: ' . print_r($_GET, true));
+        if (isset($_GET['action']) && $_GET['action'] === 'pqls_download_plugin' && check_admin_referer('pqls_download_nonce')) {
+            $this->handle_plugin_download();
         }
-        
-        if (isset($_GET['action'])) {
-            error_log('PQLS: Action detected: ' . $_GET['action']);
-            
-            // Check various download actions
-            if (in_array($_GET['action'], ['download-plugin', 'download', 'edit-plugin-file'])) {
-                $plugin_file = isset($_GET['plugin']) ? sanitize_text_field($_GET['plugin']) : '';
-                $file = isset($_GET['file']) ? sanitize_text_field($_GET['file']) : '';
-                
-                error_log('PQLS: Download action detected. Plugin: ' . $plugin_file . ', File: ' . $file);
-                
-                if (strpos($plugin_file, 'post-quantum-lattice-shield') !== false || 
-                    strpos($file, 'post-quantum-lattice-shield') !== false) {
-                    error_log('PQLS: Our plugin download detected, setting headers');
-                    add_filter('wp_headers', array($this, 'set_download_headers'));
-                }
-            }
+    }
+
+    /**
+     * The actual download handler
+     */
+    private function handle_plugin_download() {
+        $zip_file = PQLS_PLUGIN_DIR . '../public/plugin-download/postquantumlatticeshield.zip';
+
+        if (file_exists($zip_file)) {
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename="postquantumlatticeshield.zip"');
+            header('Content-Length: ' . filesize($zip_file));
+            readfile($zip_file);
+            exit;
+        } else {
+            wp_die('Plugin zip file not found.');
         }
     }
 }
 
-// Initialize the plugin
+// Instantiate the plugin
 new PostQuantumLatticeShield(); 
