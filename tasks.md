@@ -88,4 +88,5 @@
 - ✅ Error handling: Comprehensive logging
 - ✅ Security: Nonce validation, capability checks
 - ✅ jQuery fix: Fixed '$ is not a function' error in admin interface
-- ✅ Error handling: Improved key generation error handling and logging 
+- ✅ Error handling: Improved key generation error handling and logging
+- ✅ Default URL: Updated plugin to use actual Netlify site URL as default 
