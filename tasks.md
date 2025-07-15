@@ -1,177 +1,20 @@
-# Post Quantum Lattice Shield - Development Tasks
+# Project Tasks
 
-## Phase 1: Project Setup ✅
-- [x] Create project structure
-- [x] Set up Netlify configuration
-- [x] Initialize package.json
-- [x] Create basic documentation
+## Phase 1: Fix Plugin Installation
 
-## Phase 2: Microservice Development ✅
-- [x] Set up Node.js serverless functions
-- [x] Implement encrypt endpoint
-- [x] Implement generate-keypair endpoint
-- [x] Add rate limiting and security
-- [x] Add error handling and validation
-- [x] Deploy to Netlify
+- [x] **Task 1:** Correct the plugin build process to ensure the generated zip file has the proper structure for WordPress installation.
+- [x] **Task 2:** Verify the plugin header in the main `post-quantum-lattice-shield.php` file to ensure it is valid.
+- [x] **Task 3:** Generate a new plugin zip file and confirm its contents are correct before deployment.
 
-## Phase 3: Frontend Development ✅
-- [x] Create landing page
-- [x] Add API documentation
-- [x] Implement responsive design
-- [x] Add copy-to-clipboard functionality
-- [x] Deploy frontend
+## Phase 2: Resolve Decryption Errors
 
-## Phase 4: WordPress Plugin Development ✅
-- [x] Create plugin structure
-- [x] Implement admin interface
-- [x] Add Gravity Forms integration
-- [x] Implement field-level encryption
-- [x] Add key management system
-- [x] Create comprehensive documentation
+- [ ] **Task 4:** Diagnose and fix the `401 Unauthorized` error occurring during data decryption.
+- [ ] **Task 5:** Implement comprehensive logging on both the client and server to trace the API key and request headers.
+- [ ] **Task 6:** Confirm successful decryption and encryption functionality.
 
-## Phase 5: Testing & Deployment ✅
-- [x] Test microservice endpoints
-- [x] Test WordPress plugin functionality
-- [x] Test Gravity Forms integration
-- [x] Deploy to production
-- [x] Create downloadable plugin ZIP
+## Phase 3: Finalize and Deploy
 
-## URGENT BUG FIXES COMPLETED ✅
-- [x] Fixed fatal PHP parse errors in plugin code
-- [x] Fixed malformed string concatenation in decrypt buttons
-- [x] Fixed incorrect quote usage in sprintf calls
-- [x] Fixed missing comment block syntax
-- [x] Restored plugin from working backup
-- [x] Fixed plugin activation errors
-- [x] Deployed corrected plugin to WordPress installation
-
-## DECRYPT FUNCTIONALITY RESTORED ✅
-- [x] Added missing decrypt_data() method to WordPress plugin
-- [x] Added missing ajax_decrypt_field() AJAX handler
-- [x] Added decrypt_pqls_data capability for role-based access control
-- [x] Enhanced format_encrypted_entry_display() with decrypt buttons and security warnings
-- [x] Updated admin script localization with decrypt strings
-- [x] Added decrypt button functionality to gravity forms entries
-- [x] Added security warnings and audit logging for decryption attempts
-
-## CSV EXPORT FUNCTIONALITY ADDED ✅
-- [x] Added ajax_export_csv() AJAX handler
-- [x] Added generate_csv_data() method with decrypt/redaction options
-- [x] Added CSV export buttons to Gravity Forms entries page
-- [x] Added JavaScript for CSV download functionality
-- [x] Added audit logging for CSV export attempts
-- [x] Added role-based access control for export features
-- [x] Added support for both decrypted and redacted CSV exports
-
-## CRITICAL FIXES COMPLETED ✅
-- [x] Fixed PHP 8.0+ strpos() deprecation warnings by adding null checks
-- [x] Fixed JavaScript SyntaxError by removing broken onclick handlers
-- [x] Added proper event delegation for decrypt/hide buttons
-- [x] Added inline JavaScript with proper AJAX localization
-- [x] Fixed all three strpos() calls in format_encrypted_entry_display(), add_encryption_notice(), and generate_csv_data() methods
-- [x] Deployed updated plugin with all fixes
-
-## DECRYPTION ISSUE DIAGNOSIS & FIX ✅
-- [x] Identified root cause: Missing API key configuration in plugin settings
-- [x] Added API key field to WordPress admin settings page
-- [x] Added proper registration for pqls_api_key setting
-- [x] Added enhanced error logging for decryption debugging
-- [x] Created test-decrypt.php diagnostic script for troubleshooting
-- [x] Switched from broken gravity-forms.js to working inline JavaScript
-- [x] Added proper script localization for AJAX calls
-
-## NEXT STEPS FOR USER 📋
-1. **Configure API Key**: Go to Settings → PQ Lattice Shield and enter your API key
-2. **Test Connection**: Use the "Test Connection" button to verify setup
-3. **Run Diagnostic**: Access test-decrypt.php to diagnose any remaining issues
-4. **Check Error Logs**: Monitor WordPress debug.log for detailed error messages
-
-## FINAL DEBUGGING & FIXES ✅
-- [x] Fixed PHP warning "Attempt to read property 'id' on int" by handling both field objects and IDs
-- [x] Added comprehensive debug information panel to admin settings page
-- [x] Added "Test Decrypt" button for full encrypt/decrypt cycle testing
-- [x] Enhanced error logging with detailed debugging information
-- [x] Added AJAX test decrypt functionality for easier troubleshooting
-- [x] Improved error messages to guide users to check error logs
-- [x] Added configuration status display (API key length, private key status, etc.)
-
-## UPDATED USER DEBUGGING STEPS 📋
-1. **Go to Settings → PQ Lattice Shield**
-2. **Check Debug Information panel** - Verify API key and private key are set
-3. **Use "Test Connection" button** - Verify microservice connectivity
-4. **Use "Test Decrypt" button** - Test full encrypt/decrypt cycle
-5. **Check WordPress debug.log** - Look for detailed PQLS error messages
-6. **If still failing**: Check the microservice URL and API key are correct
-
-## Issues Fixed ✅
-- [x] Fixed Netlify build error (wordpress-plugin in .gitignore)
-- [x] Generated and configured API key authentication
-- [x] Fixed jQuery error in admin.js
-- [x] Fixed key generation URL issue
-- [x] Fixed `GFCommon::has_form_on_page()` method error
-- [x] Fixed Gravity Forms field editor integration
-- [x] Added proper API key authentication to all microservice calls
-- [x] Fixed field property saving mechanism for encryption toggles
-
-## Enhanced Features Completed ✅
-- [x] Visual indicators for encrypted fields (💫🔒💫)
-- [x] Gravity Forms field editor integration
-- [x] Enhanced frontend field indicators
-- [x] Comprehensive styling and animations
-- [x] Accessibility features
-- [x] Cross-browser compatibility
-- [x] Mobile responsiveness
-- [x] Dark mode support
-
-## Current Status: COMPLETED ✅
-The Post Quantum Lattice Shield is fully functional with:
-- Working microservice with ML-KEM-512 encryption
-- Complete WordPress plugin with Gravity Forms integration
-- Field-level encryption control from within Gravity Forms editor
-- Visual indicators for encrypted fields
-- Comprehensive admin interface
-- Full documentation and deployment 
-## NEW FEATURE: Decryption Functionality ✅
-- [x] Created /decrypt endpoint in microservice with API key authentication
-- [x] Added decrypt_data() function to WordPress plugin
-- [x] Added ajax_decrypt_field() AJAX handler
-- [x] Added decrypt_pqls_data capability for role-based access
-- [x] Enhanced format_encrypted_entry_display() with decrypt buttons
-- [x] Updated admin script localization with decrypt strings
-- [x] Added decrypt JavaScript functions to gravity-forms.js
-- [x] Added decrypt CSS styles to gravity-forms.css
-- [x] Added audit logging for decryption attempts
-- [x] Added security warnings for decrypted data
-- [x] Implemented proper error handling and rate limiting
-
-## Security Features Added ✅
-- ✅ API key authentication required for decrypt endpoint
-- ✅ Role-based access control (decrypt_pqls_data capability)
-- ✅ Rate limiting (10 requests/minute for decrypt vs 100 for encrypt)
-- ✅ Audit logging of all decryption attempts
-- ✅ Security warnings displayed when data is decrypted
-- ✅ Proper error handling and user feedback
-
-## Current Status: FULLY FUNCTIONAL WITH DECRYPT ✅
-The Post Quantum Lattice Shield now includes:
-- ✅ Complete encryption/decryption cycle
-- ✅ Secure microservice endpoints
-- ✅ WordPress plugin with admin interface
-- ✅ Gravity Forms integration with field-level control
-- ✅ Visual indicators and decrypt functionality
-- ✅ Proper security controls and audit trails
-- ✅ Comprehensive documentation and deployment
-
-## Current Status: FULLY FUNCTIONAL WITH DECRYPT AND CSV EXPORT ✅
-The Post Quantum Lattice Shield now includes:
-- ✅ Complete encryption/decryption cycle with ML-KEM-512
-- ✅ Secure microservice endpoints with API key authentication
-- ✅ WordPress plugin with comprehensive admin interface
-- ✅ Gravity Forms integration with field-level encryption control
-- ✅ Visual indicators (💫🔒💫) and decrypt functionality in entries
-- ✅ CSV export with decrypt/redaction options
-- ✅ Role-based access control (decrypt_pqls_data capability)
-- ✅ Proper security controls and audit trails
-- ✅ Comprehensive documentation and deployment
-- ✅ Fatal error fixes and syntax corrections
+- [ ] **Task 7:** Clean up any remaining debug code or temporary files.
+- [ ] **Task 8:** Document the setup and configuration process in the `README.md` file.
+- [ ] **Task 9:** Deploy the finalized plugin and microservice.
 
