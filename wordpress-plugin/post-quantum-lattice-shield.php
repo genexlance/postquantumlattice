@@ -195,6 +195,7 @@ class PostQuantumLatticeShield {
      */
     public function admin_init() {
         register_setting('pqls_settings', $this->option_name);
+        register_setting('pqls_settings', 'pqls_api_key');
         
         // Enqueue admin scripts
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
@@ -249,6 +250,16 @@ class PostQuantumLatticeShield {
                                    value="<?php echo esc_attr($settings['microservice_url'] ?? PQLS_MICROSERVICE_URL); ?>" 
                                    class="regular-text" required />
                             <p class="description"><?php _e('URL of your Netlify microservice endpoint', 'pqls'); ?></p>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <th scope="row"><?php _e('API Key', 'pqls'); ?></th>
+                        <td>
+                            <input type="password" name="pqls_api_key" 
+                                   value="<?php echo esc_attr(get_option('pqls_api_key')); ?>" 
+                                   class="regular-text" />
+                            <p class="description"><?php _e('API key for microservice authentication (required for decryption)', 'pqls'); ?></p>
                         </td>
                     </tr>
                     
@@ -492,7 +503,11 @@ class PostQuantumLatticeShield {
         
         if ($api_key) {
             $headers['Authorization'] = 'Bearer ' . $api_key;
+        } else {
+            error_log('PQLS: No API key configured for decryption');
         }
+        
+        error_log('PQLS: Attempting decrypt with URL: ' . $microservice_url . '/decrypt');
         
         $response = wp_remote_post($microservice_url . '/decrypt', array(
             'timeout' => 30,
@@ -505,13 +520,26 @@ class PostQuantumLatticeShield {
             return false;
         }
         
+        $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
+        
+        if ($status_code !== 200) {
+            error_log('PQLS: Decryption failed with status ' . $status_code . ': ' . $body);
+            return false;
+        }
+        
         $result = json_decode($body, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log('PQLS: Invalid JSON response in decryption: ' . json_last_error_msg());
+            return false;
+        }
         
         if (isset($result['decrypted'])) {
             return $result['decrypted'];
         }
         
+        error_log('PQLS: Decryption response missing decrypted field: ' . print_r($result, true));
         return false;
     }
     
@@ -930,10 +958,10 @@ class PostQuantumLatticeShield {
         }
         
         wp_enqueue_style('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.css', array(), PQLS_VERSION);
-        wp_enqueue_script('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.js', array('jquery'), PQLS_VERSION, true);
+        wp_enqueue_script('pqls-gravity-forms-base', PQLS_PLUGIN_URL . 'assets/admin.js', array('jquery'), PQLS_VERSION, true);
         
         // Localize script for AJAX calls
-        wp_localize_script('pqls-gravity-forms', 'pqls_ajax', array(
+        wp_localize_script('pqls-gravity-forms-base', 'pqls_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('pqls_nonce'),
             'strings' => array(
@@ -944,7 +972,7 @@ class PostQuantumLatticeShield {
         ));
         
         // Add decrypt functionality inline
-        wp_add_inline_script('pqls-gravity-forms', "
+        wp_add_inline_script('pqls-gravity-forms-base', "
             jQuery(document).ready(function($) {
                 // Decrypt button click handler
                 $(document).on('click', '.pqls-decrypt-btn', function() {

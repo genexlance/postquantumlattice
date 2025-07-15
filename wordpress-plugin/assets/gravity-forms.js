@@ -182,7 +182,7 @@
             var encryptedData = $button.data("encrypted");
             
             // Show loading state
-            $button.html("<span class="dashicons dashicons-update spin"></span> " + pqls_ajax.strings.decrypting);
+            $button.html('<span class="dashicons dashicons-update spin"></span> ' + pqls_ajax.strings.decrypting);
             $button.prop("disabled", true);
             
             $.ajax({
@@ -195,23 +195,23 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        $decryptedValue.html("<pre>" + response.data + "</pre>");
+                        $decryptedValue.html('<pre>' + response.data + '</pre>');
                         $preview.fadeOut(200, function() {
                             $decrypted.fadeIn(200);
                         });
-                        $button.html("<span class="dashicons dashicons-hidden"></span> Hide");
-                        $button.removeClass("pqls-decrypt-btn").addClass("pqls-hide-btn");
+                        $button.html('<span class="dashicons dashicons-hidden"></span> Hide');
+                        $button.removeClass('pqls-decrypt-btn').addClass('pqls-hide-btn');
                         
                         // Log decryption for audit
-                        PQLS_GravityForms.trackDecryption($button.data("field-id"));
+                        PQLS_GravityForms.trackDecryption($button.data('field-id'));
                     } else {
                         alert(response.data || pqls_ajax.strings.decrypt_failed);
-                        $button.html("<span class="dashicons dashicons-visibility"></span> Decrypt");
+                        $button.html('<span class="dashicons dashicons-visibility"></span> Decrypt');
                     }
                 },
                 error: function() {
                     alert(pqls_ajax.strings.decrypt_failed);
-                    $button.html("<span class="dashicons dashicons-visibility"></span> Decrypt");
+                    $button.html('<span class="dashicons dashicons-visibility"></span> Decrypt');
                 },
                 complete: function() {
                     $button.prop("disabled", false);
