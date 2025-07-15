@@ -42,7 +42,6 @@ class PostQuantumLatticeShield {
         add_action('admin_init', array($this, 'admin_init'));
         
         // Gravity Forms hooks
-        add_action('gform_after_submission', array($this, 'encrypt_form_data'), 10, 2);
         add_filter('gform_pre_submission_filter', array($this, 'pre_submission_encrypt'), 10, 1);
         
         // AJAX hooks
