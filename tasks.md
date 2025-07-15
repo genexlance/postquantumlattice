@@ -63,6 +63,14 @@
 - [x] Added role-based access control for export features
 - [x] Added support for both decrypted and redacted CSV exports
 
+## CRITICAL FIXES COMPLETED ✅
+- [x] Fixed PHP 8.0+ strpos() deprecation warnings by adding null checks
+- [x] Fixed JavaScript SyntaxError by removing broken onclick handlers
+- [x] Added proper event delegation for decrypt/hide buttons
+- [x] Added inline JavaScript with proper AJAX localization
+- [x] Fixed all three strpos() calls in format_encrypted_entry_display(), add_encryption_notice(), and generate_csv_data() methods
+- [x] Deployed updated plugin with all fixes
+
 ## Issues Fixed ✅
 - [x] Fixed Netlify build error (wordpress-plugin in .gitignore)
 - [x] Generated and configured API key authentication

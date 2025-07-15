@@ -639,7 +639,7 @@ class PostQuantumLatticeShield {
                 $field_value = rgar($entry, $field->id);
                 
                 // Check if field is encrypted
-                if (strpos($field_value, '[ENCRYPTED:') === 0) {
+                if ($field_value !== null && strpos($field_value, '[ENCRYPTED:') === 0) {
                     if ($export_type === 'decrypt' && current_user_can('decrypt_pqls_data')) {
                         // Decrypt the field
                         $decrypted = $this->decrypt_data($field_value);
@@ -739,7 +739,7 @@ class PostQuantumLatticeShield {
      */
     public function format_encrypted_entry_display($value, $field, $entry, $form) {
         // Check if this value is encrypted
-        if (strpos($value, '[ENCRYPTED:') === 0) {
+        if ($value !== null && strpos($value, '[ENCRYPTED:') === 0) {
             $encrypted_data = substr($value, 11, -1); // Remove [ENCRYPTED: and ]
             $short_preview = substr($encrypted_data, 0, 20) . '...';
             
@@ -751,8 +751,7 @@ class PostQuantumLatticeShield {
                 $decrypt_button = '<button type="button" class="pqls-decrypt-btn button-secondary" 
                                           data-encrypted="' . esc_attr($value) . '" 
                                           data-field-id="' . esc_attr($field->id) . '"
-                                          title="' . esc_attr__('Decrypt this field value', 'pqls') . '"
-                                          onclick="PQLS_GravityForms.decryptField(this)">
+                                          title="' . esc_attr__('Decrypt this field value', 'pqls') . '">
                                      <span class="dashicons dashicons-visibility"></span> ' . __('Decrypt', 'pqls') . '
                                    </button>';
             }
@@ -767,8 +766,7 @@ class PostQuantumLatticeShield {
                             <div class="pqls-security-warning">
                                 <small><strong>%s</strong> %s</small>
                             </div>
-                            <button type="button" class="pqls-hide-btn button-secondary" 
-                                    onclick="PQLS_GravityForms.hideDecrypted(this)">
+                            <button type="button" class="pqls-hide-btn button-secondary">
                                 <span class="dashicons dashicons-hidden"></span> %s
                             </button>
                         </div>
@@ -803,7 +801,7 @@ class PostQuantumLatticeShield {
         $has_encrypted = false;
         
         foreach ($entry as $key => $value) {
-            if (strpos($value, '[ENCRYPTED:') === 0) {
+            if ($value !== null && strpos($value, '[ENCRYPTED:') === 0) {
                 $has_encrypted = true;
                 break;
             }
@@ -933,6 +931,79 @@ class PostQuantumLatticeShield {
         
         wp_enqueue_style('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.css', array(), PQLS_VERSION);
         wp_enqueue_script('pqls-gravity-forms', PQLS_PLUGIN_URL . 'assets/gravity-forms.js', array('jquery'), PQLS_VERSION, true);
+        
+        // Localize script for AJAX calls
+        wp_localize_script('pqls-gravity-forms', 'pqls_ajax', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('pqls_nonce'),
+            'strings' => array(
+                'decrypting' => __('Decrypting...', 'pqls'),
+                'decrypt_failed' => __('Decryption failed', 'pqls'),
+                'copied' => __('Copied to clipboard', 'pqls')
+            )
+        ));
+        
+        // Add decrypt functionality inline
+        wp_add_inline_script('pqls-gravity-forms', "
+            jQuery(document).ready(function($) {
+                // Decrypt button click handler
+                $(document).on('click', '.pqls-decrypt-btn', function() {
+                    var \$button = $(this);
+                    var \$field = \$button.closest('.pqls-encrypted-field');
+                    var \$preview = \$field.find('.pqls-encrypted-preview');
+                    var \$decrypted = \$field.find('.pqls-decrypted-content');
+                    var \$decryptedValue = \$field.find('.pqls-decrypted-value');
+                    var encryptedData = \$button.data('encrypted');
+                    
+                    // Show loading state
+                    \$button.html('<span class=\"dashicons dashicons-update spin\"></span> Decrypting...');
+                    \$button.prop('disabled', true);
+                    
+                    $.ajax({
+                        url: pqls_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'pqls_decrypt_field',
+                            nonce: pqls_ajax.nonce,
+                            encrypted_data: encryptedData
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                \$decryptedValue.html('<pre>' + response.data + '</pre>');
+                                \$preview.fadeOut(200, function() {
+                                    \$decrypted.fadeIn(200);
+                                });
+                                \$button.hide();
+                            } else {
+                                alert(response.data || 'Decryption failed');
+                                \$button.html('<span class=\"dashicons dashicons-visibility\"></span> Decrypt');
+                            }
+                        },
+                        error: function() {
+                            alert('Decryption failed');
+                            \$button.html('<span class=\"dashicons dashicons-visibility\"></span> Decrypt');
+                        },
+                        complete: function() {
+                            \$button.prop('disabled', false);
+                        }
+                    });
+                });
+                
+                // Hide decrypted button click handler
+                $(document).on('click', '.pqls-hide-btn', function() {
+                    var \$button = $(this);
+                    var \$field = \$button.closest('.pqls-encrypted-field');
+                    var \$preview = \$field.find('.pqls-encrypted-preview');
+                    var \$decrypted = \$field.find('.pqls-decrypted-content');
+                    var \$decryptBtn = \$field.find('.pqls-decrypt-btn');
+                    
+                    \$decrypted.fadeOut(200, function() {
+                        \$preview.fadeIn(200);
+                        \$decryptBtn.show();
+                    });
+                });
+            });
+        ");
     }
     
     /**
