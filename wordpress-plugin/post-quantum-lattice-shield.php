@@ -237,6 +237,9 @@ class PostQuantumLatticeShield {
         $algorithm = get_option('pqls_algorithm', 'ml-kem-512');
         $key_generated = get_option('pqls_key_generated');
         
+        // Ensure encrypted_fields is an array
+        $settings['encrypted_fields'] = isset($settings['encrypted_fields']) && is_array($settings['encrypted_fields']) ? $settings['encrypted_fields'] : [];
+
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
@@ -897,28 +900,28 @@ class PostQuantumLatticeShield {
      * Add visual indicator to frontend fields
      */
     public function add_encryption_field_indicator($content, $field, $value, $lead_id, $form_id) {
-        if (is_admin()) return $content; // Don't show on admin pages
+        if (is_admin()) {
+            return $content;
+        }
 
-        $settings = get_option($this->option_name, array());
-        $encrypted_fields = $settings['encrypted_fields'][$form_id] ?? [];
-        
-        if (in_array($field->id, $encrypted_fields)) {
-            $content = str_replace('</label>', ' <span class="pqls-encrypted-indicator">💫</span></label>', $content);
+        $encrypted_fields = (array) ($this->encrypted_fields ?? []);
+        $field_id_key = $form_id . '_' . $field->id;
+
+        if (in_array($field_id_key, $encrypted_fields)) {
+            $content .= ' <span class="pqls-encrypted-icon" title="' . esc_attr__('This field is end-to-end encrypted.', 'pqls') . '">🔒</span>';
         }
 
         return $content;
     }
     
     /**
-     * Add CSS class to encrypted fields on the frontend
+     * Add a CSS class to encrypted fields for styling
      */
     public function add_encryption_field_class($classes, $field, $form) {
-        if (is_admin()) return $classes;
+        $encrypted_fields = (array) ($this->encrypted_fields ?? []);
+        $field_id_key = $form['id'] . '_' . $field->id;
 
-        $settings = get_option($this->option_name, array());
-        $encrypted_fields = $settings['encrypted_fields'][$form->id] ?? [];
-
-        if (in_array($field->id, $encrypted_fields)) {
+        if (in_array($field_id_key, $encrypted_fields)) {
             $classes .= ' pqls-encrypted-field';
         }
 

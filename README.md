@@ -147,3 +147,29 @@ MIT License - see LICENSE file for details
 ## Support
 
 For support, please open an issue in the GitHub repository or contact the development team. 
+
+To set up the microservice, you will need to create a `netlify.toml` file in the root of the project and add the following content:
+
+```toml
+[build]
+  functions = "netlify/functions"
+  publish = "public"
+
+[functions]
+  node_bundler = "esbuild"
+  [functions.node_options]
+    # Add any Node.js options here
+```
+
+You will also need to set the `PQLS_API_KEY` environment variable in your Netlify site settings.
+
+### Building the Plugin
+
+To build the plugin, you will need to have Node.js and npm installed. Once you have them installed, run the following commands in the root of the project:
+
+```bash
+npm install
+npm run build
+```
+
+This will create a `postquantumlatticeshield.zip` file in the `public/plugin-download` directory. You can then upload this file to your WordPress site. 
