@@ -127,11 +127,18 @@ class PostQuantumLatticeShield {
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         
+        $api_key = get_option('pqls_api_key');
+        $headers = array(
+            'Content-Type' => 'application/json',
+        );
+        
+        if ($api_key) {
+            $headers['Authorization'] = 'Bearer ' . $api_key;
+        }
+        
         $response = wp_remote_get($microservice_url . '/generate-keypair', array(
             'timeout' => 30,
-            'headers' => array(
-                'Content-Type' => 'application/json',
-            )
+            'headers' => $headers
         ));
         
         if (is_wp_error($response)) {
@@ -414,11 +421,18 @@ class PostQuantumLatticeShield {
             'payload' => $data
         );
         
+        $api_key = get_option('pqls_api_key');
+        $headers = array(
+            'Content-Type' => 'application/json',
+        );
+        
+        if ($api_key) {
+            $headers['Authorization'] = 'Bearer ' . $api_key;
+        }
+        
         $response = wp_remote_post($microservice_url . '/encrypt', array(
             'timeout' => 30,
-            'headers' => array(
-                'Content-Type' => 'application/json',
-            ),
+            'headers' => $headers,
             'body' => json_encode($payload)
         ));
         
@@ -468,8 +482,16 @@ class PostQuantumLatticeShield {
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         
+        $api_key = get_option('pqls_api_key');
+        $headers = array();
+        
+        if ($api_key) {
+            $headers['Authorization'] = 'Bearer ' . $api_key;
+        }
+        
         $response = wp_remote_get($microservice_url . '/generate-keypair', array(
-            'timeout' => 10
+            'timeout' => 10,
+            'headers' => $headers
         ));
         
         if (is_wp_error($response)) {
@@ -639,6 +661,19 @@ class PostQuantumLatticeShield {
                 }
             });
             
+            // Handle checkbox change event to save field property
+            jQuery(document).on('change', '#pqls_enable_encryption', function() {
+                var isChecked = jQuery(this).is(':checked');
+                SetFieldProperty('pqls_enable_encryption', isChecked);
+                
+                // Update visual indicator immediately
+                if (isChecked) {
+                    jQuery('.field_selected').addClass('pqls-encrypted-field-editor');
+                } else {
+                    jQuery('.field_selected').removeClass('pqls-encrypted-field-editor');
+                }
+            });
+            
             // Add visual styling to field editor
             jQuery('<style>')
                 .prop('type', 'text/css')
@@ -732,12 +767,21 @@ class PostQuantumLatticeShield {
      */
     public function enqueue_frontend_scripts() {
         // Only enqueue on pages with Gravity Forms
-        if (!class_exists('GFCommon') || !GFCommon::has_form_on_page()) {
+        if (!class_exists('GFCommon')) {
             return;
         }
         
-        wp_enqueue_style('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.css', array(), PQLS_VERSION);
-        wp_enqueue_script('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.js', array('jquery'), PQLS_VERSION, true);
+        // Check if we're on a page that might have forms
+        global $post;
+        if (is_object($post) && (has_shortcode($post->post_content, 'gravityform') || 
+            has_shortcode($post->post_content, 'gravityforms'))) {
+            wp_enqueue_style('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.css', array(), PQLS_VERSION);
+            wp_enqueue_script('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.js', array('jquery'), PQLS_VERSION, true);
+        } else {
+            // Always enqueue for safety - they're small files
+            wp_enqueue_style('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.css', array(), PQLS_VERSION);
+            wp_enqueue_script('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.js', array('jquery'), PQLS_VERSION, true);
+        }
     }
 }
 
