@@ -15,6 +15,7 @@
         // Key management buttons
         $('#regenerate-keys').on('click', this.regenerateKeys);
         $('#test-connection').on('click', this.testConnection);
+        $('#test-decrypt').on('click', this.testDecrypt);
         
         // Form validation
         $('form').on('submit', this.validateForm);
@@ -72,6 +73,42 @@
         });
     },
     
+    testDecrypt: function(e) {
+        e.preventDefault();
+        
+        var $button = $(this);
+        var originalText = $button.text();
+        
+        $button.prop('disabled', true)
+               .html(originalText + ' <span class="pqls-loading"></span>');
+
+        $.ajax({
+            url: pqls_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'pqls_test_decrypt',
+                nonce: pqls_ajax.nonce
+            },
+            success: function(response) {
+                $('#key-status')
+                    .removeClass('notice-error notice-success notice-warning')
+                    .addClass(response.success ? 'notice-success' : 'notice-error')
+                    .html('<p><strong>Decryption Test Result:</strong></p><p>' + response.data + '</p>')
+                    .show();
+            },
+            error: function() {
+                $('#key-status')
+                    .removeClass('notice-success notice-warning')
+                    .addClass('notice-error')
+                    .html('<p><strong>Decryption Test Result:</strong></p><p>Connection test failed. Please check your browser console for errors.</p>')
+                    .show();
+            },
+            complete: function() {
+                $button.prop('disabled', false).text(originalText);
+            }
+        });
+    },
+
     testConnection: function(e) {
         e.preventDefault();
         

@@ -417,60 +417,60 @@ class PostQuantumLatticeShield {
      * Decrypt data using microservice
      */
     private function decrypt_data($encrypted_data) {
-        $settings = get_option($this->option_name, array());
-        $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
-        $api_key = get_option('pqls_api_key', '');
+        $api_key = get_option('pqls_api_key');
+        $microservice_url = get_option('pqls_settings')['microservice_url'] ?? PQLS_MICROSERVICE_URL;
 
-        // Extensive logging for debugging
-        error_log('PQLS Decrypt: Preparing to send request to ' . $microservice_url . '/decrypt');
-        error_log('PQLS Decrypt: API Key length: ' . strlen($api_key));
-        error_log('PQLS Decrypt: API Key (first 8 chars): ' . substr($api_key, 0, 8));
+        if (empty($api_key)) {
+            return ['success' => false, 'message' => 'API Key is not configured.'];
+        }
 
+        if (empty($encrypted_data)) {
+            return ['success' => false, 'message' => 'Encrypted data is empty.'];
+        }
+
+        $private_key = get_option('pqls_private_key');
+        if (empty($private_key)) {
+            return ['success' => false, 'message' => 'Private key not found.'];
+        }
+        
         $headers = array(
-            'Content-Type'  => 'application/json',
+            'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . $api_key,
         );
-        
-        // Log the headers (excluding the full key for security)
-        $loggable_headers = $headers;
-        if (!empty($api_key)) {
-            $loggable_headers['Authorization'] = 'Bearer ' . substr($api_key, 0, 8) . '...';
-        }
-        error_log('PQLS Decrypt: Request headers: ' . print_r($loggable_headers, true));
 
-        $body = array(
+        $body = json_encode([
             'encryptedData' => $encrypted_data,
-            'privateKey'    => get_option('pqls_private_key'),
-            'algorithm'     => get_option('pqls_algorithm', 'ml-kem-512')
-        );
+            'privateKey' => $private_key
+        ]);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log('PQLS: Failed to encode JSON for decryption: ' . json_last_error_msg());
+            return ['success' => false, 'message' => 'Internal error: could not encode request.'];
+        }
         
         $response = wp_remote_post($microservice_url . '/decrypt', array(
+            'timeout' => 30,
             'headers' => $headers,
-            'body'    => json_encode($body),
-            'timeout' => 30
+            'body' => $body
         ));
         
         if (is_wp_error($response)) {
-            error_log('PQLS Decrypt: WP_Error - ' . $response->get_error_message());
-            return false;
+            error_log('PQLS: Decryption request failed - ' . $response->get_error_message());
+            return ['success' => false, 'message' => 'Decryption request failed: ' . $response->get_error_message()];
         }
         
         $status_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
         
-        if ($status_code !== 200) {
-            error_log('PQLS Decrypt: Failed with status ' . $status_code . ': ' . $response_body);
-            return false;
+        $result = json_decode($response_body, true);
+        
+        if ($status_code === 200 && isset($result['decryptedData'])) {
+            return ['success' => true, 'data' => $result['decryptedData']];
+        } else {
+            $error_message = isset($result['error']) ? $result['error'] : 'Unknown error during decryption.';
+            error_log("PQLS: Decryption failed with status {$status_code}. Response: {$response_body}");
+            return ['success' => false, 'message' => $error_message];
         }
-        
-        $data = json_decode($response_body, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log('PQLS Decrypt: Invalid JSON response: ' . json_last_error_msg());
-            return false;
-        }
-        
-        return $data['decryptedData'] ?? false;
     }
     
     /**
