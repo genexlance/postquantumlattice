@@ -108,7 +108,8 @@ class PostQuantumLatticeShield {
      */
     private function generate_keypair() {
         // For WordPress, we'll generate the keypair by calling our microservice
-        $microservice_url = get_option($this->option_name)['microservice_url'] ?? PQLS_MICROSERVICE_URL;
+        $settings = get_option($this->option_name, array());
+        $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         
         $response = wp_remote_get($microservice_url . '/generate-keypair', array(
             'timeout' => 30,
@@ -122,8 +123,20 @@ class PostQuantumLatticeShield {
             return false;
         }
         
+        $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
+        
+        if ($status_code !== 200) {
+            error_log('PQLS: Generate keypair failed with status ' . $status_code . ': ' . $body);
+            return false;
+        }
+        
         $data = json_decode($body, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log('PQLS: Invalid JSON response: ' . json_last_error_msg());
+            return false;
+        }
         
         if (isset($data['publicKey']) && isset($data['privateKey'])) {
             update_option('pqls_public_key', $data['publicKey']);
@@ -133,6 +146,7 @@ class PostQuantumLatticeShield {
             return true;
         }
         
+        error_log('PQLS: Response missing required keys: ' . print_r($data, true));
         return false;
     }
     
