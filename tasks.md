@@ -64,3 +64,34 @@ The Post Quantum Lattice Shield is fully functional with:
 - Visual indicators for encrypted fields
 - Comprehensive admin interface
 - Full documentation and deployment 
+## NEW FEATURE: Decryption Functionality ✅
+- [x] Created /decrypt endpoint in microservice with API key authentication
+- [x] Added decrypt_data() function to WordPress plugin
+- [x] Added ajax_decrypt_field() AJAX handler
+- [x] Added decrypt_pqls_data capability for role-based access
+- [x] Enhanced format_encrypted_entry_display() with decrypt buttons
+- [x] Updated admin script localization with decrypt strings
+- [x] Added decrypt JavaScript functions to gravity-forms.js
+- [x] Added decrypt CSS styles to gravity-forms.css
+- [x] Added audit logging for decryption attempts
+- [x] Added security warnings for decrypted data
+- [x] Implemented proper error handling and rate limiting
+
+## Security Features Added ✅
+- ✅ API key authentication required for decrypt endpoint
+- ✅ Role-based access control (decrypt_pqls_data capability)
+- ✅ Rate limiting (10 requests/minute for decrypt vs 100 for encrypt)
+- ✅ Audit logging of all decryption attempts
+- ✅ Security warnings displayed when data is decrypted
+- ✅ Proper error handling and user feedback
+
+## Current Status: FULLY FUNCTIONAL WITH DECRYPT ✅
+The Post Quantum Lattice Shield now includes:
+- ✅ Complete encryption/decryption cycle
+- ✅ Secure microservice endpoints
+- ✅ WordPress plugin with admin interface
+- ✅ Gravity Forms integration with field-level control
+- ✅ Visual indicators and decrypt functionality
+- ✅ Proper security controls and audit trails
+- ✅ Comprehensive documentation and deployment
+

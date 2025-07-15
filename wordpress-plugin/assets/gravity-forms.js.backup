@@ -172,76 +172,7 @@
         },
         
         // Analytics and monitoring
-        
-        decryptField: function(button) {
-            var $button = $(button);
-            var $field = $button.closest(".pqls-encrypted-field");
-            var $preview = $field.find(".pqls-encrypted-preview");
-            var $decrypted = $field.find(".pqls-decrypted-content");
-            var $decryptedValue = $field.find(".pqls-decrypted-value");
-            var encryptedData = $button.data("encrypted");
-            
-            // Show loading state
-            $button.html("<span class="dashicons dashicons-update spin"></span> " + pqls_ajax.strings.decrypting);
-            $button.prop("disabled", true);
-            
-            $.ajax({
-                url: pqls_ajax.ajax_url,
-                type: "POST",
-                data: {
-                    action: "pqls_decrypt_field",
-                    nonce: pqls_ajax.nonce,
-                    encrypted_data: encryptedData
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $decryptedValue.html("<pre>" + response.data + "</pre>");
-                        $preview.fadeOut(200, function() {
-                            $decrypted.fadeIn(200);
-                        });
-                        $button.html("<span class="dashicons dashicons-hidden"></span> Hide");
-                        $button.removeClass("pqls-decrypt-btn").addClass("pqls-hide-btn");
-                        
-                        // Log decryption for audit
-                        PQLS_GravityForms.trackDecryption($button.data("field-id"));
-                    } else {
-                        alert(response.data || pqls_ajax.strings.decrypt_failed);
-                        $button.html("<span class="dashicons dashicons-visibility"></span> Decrypt");
-                    }
-                },
-                error: function() {
-                    alert(pqls_ajax.strings.decrypt_failed);
-                    $button.html("<span class="dashicons dashicons-visibility"></span> Decrypt");
-                },
-                complete: function() {
-                    $button.prop("disabled", false);
-                }
-            });
-        },
-        
-        hideDecrypted: function(button) {
-            var $button = $(button);
-            var $field = $button.closest(".pqls-encrypted-field");
-            var $preview = $field.find(".pqls-encrypted-preview");
-            var $decrypted = $field.find(".pqls-decrypted-content");
-            
-            $decrypted.fadeOut(200, function() {
-                $preview.fadeIn(200);
-            });
-            $button.html("<span class="dashicons dashicons-visibility"></span> Decrypt");
-            $button.removeClass("pqls-hide-btn").addClass("pqls-decrypt-btn");
-        },
-        
-        trackDecryption: function(fieldId) {
-            // Optional: Track decryption for analytics/audit
-            if (typeof gtag !== "undefined") {
-                gtag("event", "field_decrypted", {
-                    "field_id": fieldId,
-                    "user_id": "admin"
-                });
-            }
-        },
-                trackEncryptedFieldInteraction: function(action, fieldId) {
+        trackEncryptedFieldInteraction: function(action, fieldId) {
             // Track user interactions for analytics (optional)
             if (typeof gtag !== 'undefined') {
                 gtag('event', 'encrypted_field_interaction', {

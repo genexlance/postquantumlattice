@@ -115,7 +115,7 @@ class PostQuantumLatticeShield {
         $role = get_role('administrator');
         if ($role) {
             $role->remove_cap('manage_pqls');
-            $role->remove_cap("decrypt_pqls_data");        }
+        }
     }
     
     /**
@@ -204,15 +204,10 @@ class PostQuantumLatticeShield {
         }
         
         wp_enqueue_script('pqls-admin', PQLS_PLUGIN_URL . 'assets/admin.js', array('jquery'), PQLS_VERSION, true);
-        wp_localize_script("pqls-admin", "pqls_ajax", array(
-            "ajax_url" => admin_url("admin-ajax.php"),
-            "nonce" => wp_create_nonce("pqls_nonce"),
-            "strings" => array(
-                "decrypting" => __("Decrypting...", "pqls"),
-                "decrypt_failed" => __("Decryption failed", "pqls"),
-                "copied" => __("Copied to clipboard", "pqls")
-            )
-        ));        ));
+        wp_localize_script('pqls-admin', 'pqls_ajax', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('pqls_nonce')
+        ));
         
         wp_enqueue_style('pqls-admin', PQLS_PLUGIN_URL . 'assets/admin.css', array(), PQLS_VERSION);
     }
@@ -620,67 +615,29 @@ class PostQuantumLatticeShield {
      */
     public function format_encrypted_entry_display($value, $field, $entry, $form) {
         // Check if this value is encrypted
-        if (strpos($value, "[ENCRYPTED:") === 0) {
-            $encrypted_data = $value;
-            $short_preview = substr($encrypted_data, 0, 50) . "...";
-            
-            // Check if user can decrypt
-            $can_decrypt = current_user_can("decrypt_pqls_data");
-            $decrypt_button = "";
-            
-            if ($can_decrypt) {
-                $decrypt_button = "<button type="button" class="pqls-decrypt-btn button-secondary" 
-                                          data-encrypted="" . esc_attr($encrypted_data) . "" 
-                                          data-field-id="" . esc_attr($field->id) . ""
-                                          title="" . esc_attr__("Decrypt this field value", "pqls") . "">
-                                     <span class="dashicons dashicons-visibility"></span> " . __("Decrypt", "pqls") . "
-                                   </button>";
-            }
+        if (strpos($value, '[ENCRYPTED:') === 0) {
+            $encrypted_data = substr($value, 11, -1); // Remove [ENCRYPTED: and ]
+            $short_preview = substr($encrypted_data, 0, 20) . '...';
             
             return sprintf(
-                "<div class="pqls-encrypted-field">
-                    <div class="pqls-encrypted-badge">%s</div>
+                '<div class="pqls-encrypted-field">
+                    <span class="pqls-encrypted-badge">🔒 ENCRYPTED</span>
                     <div class="pqls-encrypted-content">
                         <div class="pqls-encrypted-preview">%s</div>
-                        <div class="pqls-decrypted-content" style="display: none;">
-                            <div class="pqls-decrypted-value"></div>
-                            <div class="pqls-security-warning">
-                                <small><strong>%s</strong> %s</small>
-                            </div>
-                        </div>
-                        <div class="pqls-encrypted-full" style="display: none;">
-                            <textarea readonly class="pqls-encrypted-textarea">%s</textarea>
-                        </div>
-                        <div class="pqls-field-actions">
-                            %s
-                            <button type="button" class="pqls-toggle-encrypted button-secondary" 
-                                    data-target-preview=".pqls-encrypted-preview" 
-                                    data-target-full=".pqls-encrypted-full">
-                                <span class="show-text">%s</span>
-                                <span class="hide-text" style="display: none;">%s</span>
-                            </button>
-                            <button type="button" class="pqls-copy-encrypted button-secondary" 
-                                    data-encrypted="" . esc_attr($encrypted_data) . ""
-                                    title="" . esc_attr__("Copy encrypted data to clipboard", "pqls") . "">
-                                <span class="dashicons dashicons-clipboard"></span> %s
-                            </button>
-                        </div>
+                        <div class="pqls-encrypted-full" style="display: none;">%s</div>
+                        <button type="button" class="pqls-toggle-encrypted button-secondary" data-target-preview=".pqls-encrypted-preview" data-target-full=".pqls-encrypted-full">
+                            <span class="show-text">Show Full</span>
+                            <span class="hide-text" style="display: none;">Hide</span>
+                        </button>
                     </div>
-                </div>",
-                __("🔒 ENCRYPTED", "pqls"),
+                </div>',
                 esc_html($short_preview),
-                __("⚠️ Security Warning:", "pqls"),
-                __("Decrypted data is visible in plaintext. Handle with care.", "pqls"),
-                esc_textarea(substr($encrypted_data, 11, -1)),
-                $decrypt_button,
-                __("Show Full", "pqls"),
-                __("Hide", "pqls"),
-                __("Copy", "pqls")
+                '<textarea readonly class="pqls-encrypted-textarea">' . esc_textarea($encrypted_data) . '</textarea>'
             );
         }
         
         return $value;
-    }    }
+    }
     
     /**
      * Add encryption notice to entry info
