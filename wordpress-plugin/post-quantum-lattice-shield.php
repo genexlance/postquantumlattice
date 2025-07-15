@@ -141,14 +141,9 @@ class PostQuantumLatticeShield {
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         
-        $api_key = get_option('pqls_api_key');
         $headers = array(
             'Content-Type' => 'application/json',
         );
-        
-        if ($api_key) {
-            $headers['Authorization'] = 'Bearer ' . $api_key;
-        }
         
         $response = wp_remote_get($microservice_url . '/generate-keypair', array(
             'timeout' => 30,
@@ -206,7 +201,7 @@ class PostQuantumLatticeShield {
     public function admin_init() {
         register_setting('pqls_settings', $this->option_name);
         register_setting('pqls_settings', 'pqls_api_key');
-        
+
         // Enqueue admin scripts
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
     }
@@ -251,28 +246,30 @@ class PostQuantumLatticeShield {
                 settings_fields('pqls_settings');
                 do_settings_sections('pqls_settings');
                 ?>
-                
+
                 <table class="form-table">
                     <tr>
                         <th scope="row"><?php _e('Microservice URL', 'pqls'); ?></th>
                         <td>
-                            <input type="url" name="<?php echo $this->option_name; ?>[microservice_url]" 
-                                   value="<?php echo esc_attr($settings['microservice_url'] ?? PQLS_MICROSERVICE_URL); ?>" 
+                            <input type="url" name="<?php echo $this->option_name; ?>[microservice_url]"
+                                   value="<?php echo esc_attr($settings['microservice_url'] ?? PQLS_MICROSERVICE_URL); ?>"
                                    class="regular-text" required />
-                            <p class="description"><?php _e('URL of your Netlify microservice endpoint', 'pqls'); ?></p>
+                            <p class="description"><?php _e('URL of your Netlify microservice endpoint.', 'pqls'); ?></p>
                         </td>
                     </tr>
-                    
+
                     <tr>
-                        <th scope="row"><?php _e('API Key', 'pqls'); ?></th>
+                        <th scope="row">
+                            <label for="pqls_api_key"><?php _e('Decryption API Key', 'pqls'); ?></label>
+                        </th>
                         <td>
-                            <input type="password" name="pqls_api_key" 
-                                   value="<?php echo esc_attr(get_option('pqls_api_key')); ?>" 
+                            <input type="password" id="pqls_api_key" name="pqls_api_key"
+                                   value="<?php echo esc_attr(get_option('pqls_api_key')); ?>"
                                    class="regular-text" />
-                            <p class="description"><?php _e('API key for microservice authentication (required for decryption)', 'pqls'); ?></p>
+                            <p class="description"><?php _e('Required for decrypting data. This key is stored in your microservice environment variables.', 'pqls'); ?></p>
                         </td>
                     </tr>
-                    
+
                     <tr>
                         <th scope="row"><?php _e('Public Key', 'pqls'); ?></th>
                         <td>
@@ -319,12 +316,12 @@ class PostQuantumLatticeShield {
             </form>
             
             <div class="pqls-debug-info" style="margin-top: 20px; padding: 15px; background: #f0f0f0; border: 1px solid #ccc;">
-                <h4>Debug Information</h4>
-                <p><strong>API Key Status:</strong> <?php echo get_option('pqls_api_key') ? 'Set (' . strlen(get_option('pqls_api_key')) . ' characters)' : 'Not set'; ?></p>
-                <p><strong>Private Key Status:</strong> <?php echo get_option('pqls_private_key') ? 'Set (' . strlen(get_option('pqls_private_key')) . ' characters)' : 'Not set'; ?></p>
+                <h4><?php _e('Debug Information', 'pqls'); ?></h4>
+                <p><strong>API Key Status:</strong> <?php echo get_option('pqls_api_key') ? 'Set' : 'Not Set'; ?></p>
+                <p><strong>Private Key Status:</strong> <?php echo get_option('pqls_private_key') ? 'Set' : 'Not Set'; ?></p>
                 <p><strong>Microservice URL:</strong> <?php echo esc_html($settings['microservice_url'] ?? PQLS_MICROSERVICE_URL); ?></p>
                 <p><strong>Current User Can Decrypt:</strong> <?php echo current_user_can('decrypt_pqls_data') ? 'Yes' : 'No'; ?></p>
-                <p><em>Check WordPress debug.log for detailed error messages</em></p>
+                <p><em><?php _e('Check your browser console (F12) and WordPress debug.log for detailed error messages.', 'pqls'); ?></em></p>
             </div>
             
             <div class="pqls-info">
@@ -487,14 +484,9 @@ class PostQuantumLatticeShield {
             'payload' => $data
         );
         
-        $api_key = get_option('pqls_api_key');
         $headers = array(
             'Content-Type' => 'application/json',
         );
-        
-        if ($api_key) {
-            $headers['Authorization'] = 'Bearer ' . $api_key;
-        }
         
         $response = wp_remote_post($microservice_url . '/encrypt', array(
             'timeout' => 30,
@@ -541,22 +533,21 @@ class PostQuantumLatticeShield {
             'privateKey' => $private_key,
             'ciphertext' => $ciphertext
         );
-        
+
         $api_key = get_option('pqls_api_key');
         $headers = array(
             'Content-Type' => 'application/json',
         );
-        
+
         if ($api_key) {
-            $headers['Authorization'] = 'Bearer ' . $api_key;
-            error_log('PQLS: Using API key for decryption (length: ' . strlen($api_key) . ')');
+            $trimmed_key = trim($api_key);
+            $headers['Authorization'] = 'Bearer ' . $trimmed_key;
+            error_log('PQLS: Using API key for decryption. Length: ' . strlen($trimmed_key) . '. Starts with: ' . substr($trimmed_key, 0, 4) . '...');
         } else {
-            error_log('PQLS: No API key configured for decryption');
+            error_log('PQLS: No API key provided for decryption.');
         }
-        
+
         error_log('PQLS: Attempting decrypt with URL: ' . $microservice_url . '/decrypt');
-        error_log('PQLS: Request headers: ' . print_r($headers, true));
-        error_log('PQLS: Request payload keys: ' . implode(', ', array_keys($payload)));
         
         $response = wp_remote_post($microservice_url . '/decrypt', array(
             'timeout' => 30,
@@ -574,9 +565,6 @@ class PostQuantumLatticeShield {
         
         if ($status_code !== 200) {
             error_log('PQLS: Decryption failed with status ' . $status_code . ': ' . $body);
-            // Log response headers for debugging
-            $response_headers = wp_remote_retrieve_headers($response);
-            error_log('PQLS: Response headers: ' . print_r($response_headers, true));
             return false;
         }
         
@@ -781,16 +769,8 @@ class PostQuantumLatticeShield {
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         
-        $api_key = get_option('pqls_api_key');
-        $headers = array();
-        
-        if ($api_key) {
-            $headers['Authorization'] = 'Bearer ' . $api_key;
-        }
-        
         $response = wp_remote_get($microservice_url . '/generate-keypair', array(
-            'timeout' => 10,
-            'headers' => $headers
+            'timeout' => 10
         ));
         
         if (is_wp_error($response)) {
@@ -813,47 +793,38 @@ class PostQuantumLatticeShield {
      */
     public function ajax_test_decrypt() {
         check_ajax_referer('pqls_nonce', 'nonce');
-        
+
         if (!current_user_can('manage_pqls')) {
             wp_die(__('Insufficient permissions', 'pqls'));
         }
-        
+
         // Create a test encrypted value
         $test_plain = 'Test decryption: ' . current_time('mysql');
-        
+
         // First encrypt the test data
         $public_key = get_option('pqls_public_key');
         if (!$public_key) {
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('No public key available - generate keys first', 'pqls')
-            ));
+            wp_send_json_error(__('No public key available - generate keys first', 'pqls'));
         }
-        
+
         $encrypted = $this->encrypt_data($test_plain, $public_key);
         if (!$encrypted) {
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('Encryption test failed', 'pqls')
-            ));
+            wp_send_json_error(__('Encryption test failed', 'pqls'));
         }
-        
+
         // Now test decryption
         $decrypted = $this->decrypt_data($encrypted);
-        
+
         if ($decrypted !== false) {
             $success = ($decrypted === $test_plain);
             wp_send_json(array(
                 'success' => $success,
-                'data' => $success ? 
-                    __('Encrypt/decrypt test successful!', 'pqls') : 
-                    __('Decryption returned wrong data: ', 'pqls') . $decrypted
+                'data' => $success ?
+                    __('Encrypt/decrypt test successful!', 'pqls') :
+                    __('Decryption returned wrong data.', 'pqls')
             ));
         } else {
-            wp_send_json(array(
-                'success' => false,
-                'data' => __('Decryption test failed - check error logs', 'pqls')
-            ));
+            wp_send_json_error(__('Decryption test failed - check error logs', 'pqls'));
         }
     }
     
@@ -1102,8 +1073,13 @@ class PostQuantumLatticeShield {
         // Add decrypt functionality inline
         wp_add_inline_script('pqls-gravity-forms-base', "
             jQuery(document).ready(function($) {
+                // Debug: Check if JavaScript is loading
+                console.log('PQLS: JavaScript loaded, looking for encrypted fields...');
+                console.log('PQLS: Found ' + $('.pqls-encrypted-field').length + ' encrypted fields');
+                
                 // Decrypt button click handler
                 $(document).on('click', '.pqls-decrypt-btn', function() {
+                    console.log('PQLS: Decrypt button clicked');
                     var \$button = $(this);
                     var \$field = \$button.closest('.pqls-encrypted-field');
                     var \$preview = \$field.find('.pqls-encrypted-preview');

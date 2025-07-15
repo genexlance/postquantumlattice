@@ -37,19 +37,38 @@ function checkRateLimit(clientIp) {
 
 // API key authentication
 function authenticateRequest(event) {
+  // Log all incoming headers for debugging
+  console.log('--- Authentication Start ---');
+  console.log('Incoming Headers:', JSON.stringify(event.headers, null, 2));
+
   const authHeader = event.headers.authorization || event.headers.Authorization;
   const expectedKey = process.env.PQLS_API_KEY;
-  
+
+  // Log the values the function is seeing
+  console.log('Auth Header Received:', authHeader);
+  console.log('Expected Key from process.env.PQLS_API_KEY (first 5 chars):', expectedKey ? expectedKey.substring(0, 5) + '...' : 'Not Set');
+
   if (!expectedKey) {
+    console.log('Authentication failed: PQLS_API_KEY is not set in the environment.');
     return false; // No API key configured
   }
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('Authentication failed: Missing or malformed "Bearer" token.');
     return false;
   }
-  
+
   const providedKey = authHeader.substring(7); // Remove 'Bearer ' prefix
-  return providedKey === expectedKey;
+  
+  // Log the keys being compared
+  console.log('Provided Key from Header (first 5 chars):', providedKey.substring(0, 5) + '...');
+  
+  const isAuthenticated = providedKey.trim() === expectedKey.trim();
+  
+  console.log('Are keys identical?', isAuthenticated);
+  console.log('--- Authentication End ---');
+  
+  return isAuthenticated;
 }
 
 exports.handler = async (event, context) => {
