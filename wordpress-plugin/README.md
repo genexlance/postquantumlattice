@@ -24,7 +24,6 @@ A WordPress plugin that secures form data using post-quantum ML-KEM-512 encrypti
 
 1. **Download the Plugin**
    - Download the plugin ZIP file from your microservice
-   - Or clone this repository into your WordPress plugins directory
 
 2. **Upload to WordPress**
    - Go to WordPress Admin → Plugins → Add New

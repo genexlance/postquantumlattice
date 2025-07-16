@@ -1,0 +1,83 @@
+{
+  "systemInfo": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v20.19.2",
+    "memory": 64
+  },
+  "oqsLibrary": {
+    "success": true
+  },
+  "algorithms": [
+    {
+      "algorithm": "ML-KEM-768",
+      "success": true,
+      "timing": {
+        "total": 1,
+        "keypair": 1,
+        "encapsulation": 1,
+        "decapsulation": 0
+      },
+      "sizes": {
+        "publicKey": 1184,
+        "secretKey": 2400,
+        "sharedSecret": 32,
+        "ciphertext": 1088
+      }
+    },
+    {
+      "algorithm": "ML-KEM-1024",
+      "success": true,
+      "timing": {
+        "total": 0,
+        "keypair": 0,
+        "encapsulation": 0,
+        "decapsulation": 0
+      },
+      "sizes": {
+        "publicKey": 1568,
+        "secretKey": 3168,
+        "sharedSecret": 32,
+        "ciphertext": 1568
+      }
+    }
+  ],
+  "performance": {
+    "success": true,
+    "successRate": 1,
+    "averageTime": 0,
+    "averageMemoryDelta": 1288
+  },
+  "integration": {
+    "success": true,
+    "verification": {
+      "available": true,
+      "functional": true,
+      "supportedAlgorithms": [
+        {
+          "level": "standard",
+          "algorithm": "ML-KEM-768",
+          "functional": true,
+          "keySize": {
+            "publicKey": 1184,
+            "secretKey": 2400
+          },
+          "sharedSecretSize": 32,
+          "ciphertextSize": 1088
+        },
+        {
+          "level": "high",
+          "algorithm": "ML-KEM-1024",
+          "functional": true,
+          "keySize": {
+            "publicKey": 1568,
+            "secretKey": 3168
+          },
+          "sharedSecretSize": 32,
+          "ciphertextSize": 1568
+        }
+      ],
+      "errors": []
+    }
+  }
+}

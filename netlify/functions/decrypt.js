@@ -1,5 +1,46 @@
 const crypto = require('crypto');
 
+// Memory optimization for serverless environment
+if (process.env.NODE_ENV === 'production') {
+    // Optimize garbage collection for post-quantum operations
+    if (global.gc) {
+        setInterval(() => {
+            if (process.memoryUsage().heapUsed > 268435456) {
+                global.gc();
+            }
+        }, 30000); // Run GC every 30 seconds if memory usage is high
+    }
+    
+    // Set memory limits for OQS operations
+    process.env.OQS_MEMORY_LIMIT = '256';
+    process.env.OQS_CACHE_SIZE = '32';
+}
+
+// Serverless optimization for post-quantum functions
+if (typeof global !== 'undefined' && !global.__OQS_OPTIMIZED__) {
+    global.__OQS_OPTIMIZED__ = true;
+    
+    // Memory management for serverless
+    const originalMemoryUsage = process.memoryUsage;
+    process.memoryUsage = function() {
+        const usage = originalMemoryUsage();
+        if (usage.heapUsed > 800 * 1024 * 1024) { // 800MB threshold
+            if (global.gc) global.gc();
+        }
+        return usage;
+    };
+    
+    // OQS library caching
+    let oqsInstance = null;
+    global.getOQSInstance = function() {
+        if (!oqsInstance) {
+            oqsInstance = require('oqs.js');
+        }
+        return oqsInstance;
+    };
+}
+const PostQuantumCrypto = require('./crypto-utils');
+
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
@@ -24,26 +65,164 @@ exports.handler = async (event) => {
             return { statusCode: 400, body: JSON.stringify({ error: 'Missing encryptedData or privateKey' }) };
         }
 
-        const privateKey = crypto.createPrivateKey(privateKeyPem);
+        // Initialize post-quantum crypto utility
+        const pqCrypto = new PostQuantumCrypto();
+        
+        // Detect encryption type
+        const encryptionType = pqCrypto.detectEncryptionType(encryptedData);
+        console.log(`Detected encryption type: ${encryptionType}`);
 
-        const decryptedData = crypto.privateDecrypt(
-            {
-                key: privateKey,
-                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-                oaepHash: 'sha256',
-            },
-            Buffer.from(encryptedData, 'base64')
-        );
+        let decryptedData;
+        let algorithmUsed;
+
+        if (encryptionType === 'post-quantum') {
+            // Handle post-quantum encrypted data
+            try {
+                await pqCrypto.initialize();
+                
+                // Parse encrypted data if it's a string
+                let parsedEncryptedData = encryptedData;
+                if (typeof encryptedData === 'string') {
+                    try {
+                        parsedEncryptedData = JSON.parse(encryptedData);
+                    } catch (parseError) {
+                        console.error('Failed to parse post-quantum encrypted data:', parseError.message);
+                        return {
+                            statusCode: 400,
+                            body: JSON.stringify({ 
+                                error: 'Invalid post-quantum encrypted data format',
+                                details: 'Data must be valid JSON object',
+                                encryptionType: 'post-quantum'
+                            })
+                        };
+                    }
+                }
+
+                decryptedData = await pqCrypto.decrypt(parsedEncryptedData, privateKeyPem);
+                algorithmUsed = parsedEncryptedData.algorithm || 'ML-KEM+AES-256-GCM';
+                
+                console.log(`Successfully decrypted post-quantum data using ${algorithmUsed}`);
+                
+            } catch (pqError) {
+                console.error('Post-quantum decryption failed:', pqError.message);
+                
+                // Provide specific error messages based on error codes
+                let errorMessage = 'Post-quantum decryption failed';
+                let statusCode = 500;
+                
+                if (pqError.code === PostQuantumCrypto.ERROR_CODES.LIBRARY_NOT_INITIALIZED || 
+                    pqError.code === PostQuantumCrypto.ERROR_CODES.LIBRARY_LOAD_FAILED) {
+                    errorMessage = 'Post-quantum cryptography library not available';
+                    statusCode = 503; // Service Unavailable
+                } else if (pqError.code === PostQuantumCrypto.ERROR_CODES.INVALID_DATA_FORMAT) {
+                    errorMessage = 'Invalid post-quantum encrypted data format';
+                    statusCode = 400; // Bad Request
+                } else if (pqError.code === PostQuantumCrypto.ERROR_CODES.INVALID_KEY_FORMAT) {
+                    errorMessage = 'Invalid post-quantum private key format';
+                    statusCode = 400; // Bad Request
+                } else if (pqError.code === PostQuantumCrypto.ERROR_CODES.DECAPSULATION_FAILED ||
+                          pqError.code === PostQuantumCrypto.ERROR_CODES.DECRYPTION_FAILED) {
+                    errorMessage = 'Decryption failed - invalid key or corrupted data';
+                    statusCode = 400; // Bad Request
+                } else if (pqError.code === PostQuantumCrypto.ERROR_CODES.ALGORITHM_NOT_SUPPORTED) {
+                    errorMessage = 'Unsupported post-quantum algorithm';
+                    statusCode = 400; // Bad Request
+                }
+                
+                return {
+                    statusCode: statusCode,
+                    body: JSON.stringify({ 
+                        error: errorMessage,
+                        details: pqError.message,
+                        encryptionType: 'post-quantum',
+                        errorCode: pqError.code
+                    })
+                };
+            }
+            
+        } else if (encryptionType === 'rsa' || encryptionType === 'unknown') {
+            // Handle RSA encrypted data (legacy format)
+            try {
+                console.log('Attempting RSA decryption for legacy data');
+                
+                // Handle both direct base64 string and JSON object formats
+                let encryptedBuffer;
+                if (typeof encryptedData === 'string') {
+                    // Direct base64 string (legacy format)
+                    encryptedBuffer = Buffer.from(encryptedData, 'base64');
+                } else if (typeof encryptedData === 'object' && encryptedData.encryptedData) {
+                    // JSON object with encryptedData field
+                    encryptedBuffer = Buffer.from(encryptedData.encryptedData, 'base64');
+                } else {
+                    throw new Error('Invalid RSA encrypted data format');
+                }
+
+                const privateKey = crypto.createPrivateKey(privateKeyPem);
+
+                const decryptedBuffer = crypto.privateDecrypt(
+                    {
+                        key: privateKey,
+                        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                        oaepHash: 'sha256',
+                    },
+                    encryptedBuffer
+                );
+
+                decryptedData = decryptedBuffer.toString('utf8');
+                algorithmUsed = 'RSA-OAEP-256';
+                
+                console.log('Successfully decrypted RSA legacy data');
+                
+            } catch (rsaError) {
+                console.error('RSA decryption failed:', rsaError.message);
+                
+                // If RSA decryption fails and we detected unknown format, 
+                // provide helpful error message
+                let errorMessage = 'RSA decryption failed';
+                if (encryptionType === 'unknown') {
+                    errorMessage = 'Unable to decrypt data - unrecognized format and RSA decryption failed';
+                }
+                
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ 
+                        error: errorMessage,
+                        details: rsaError.message,
+                        encryptionType: encryptionType,
+                        suggestion: 'Verify that the correct private key is being used and data is not corrupted'
+                    })
+                };
+            }
+        } else {
+            // Unrecognized format
+            console.error('Unrecognized encryption format:', encryptionType);
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ 
+                    error: 'Unrecognized encryption format',
+                    details: 'Data does not match known RSA or post-quantum encryption formats',
+                    encryptionType: encryptionType
+                })
+            };
+        }
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ decryptedData: decryptedData.toString('utf8') }),
+            body: JSON.stringify({ 
+                decryptedData: decryptedData,
+                algorithmUsed: algorithmUsed,
+                encryptionType: encryptionType
+            }),
         };
+        
     } catch (error) {
-        console.error('Decryption error:', error);
+        console.error('Unexpected decryption error:', error);
         return { 
             statusCode: 500, 
-            body: JSON.stringify({ error: 'An unexpected error occurred during decryption.', details: error.message }) 
+            body: JSON.stringify({ 
+                error: 'An unexpected error occurred during decryption',
+                details: error.message 
+            }) 
         };
     }
 };

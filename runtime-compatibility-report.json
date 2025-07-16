@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-07-16T22:26:12.718Z",
+  "nodeVersion": "v20.19.2",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "totalMemory": 65536,
+  "freeMemory": 3702,
+  "cpuCount": 16,
+  "results": {
+    "nodeVersion": true,
+    "systemCompatibility": true,
+    "memoryRequirements": true,
+    "buildTools": true,
+    "oqsCompilation": true,
+    "serverlessEnvironment": true
+  },
+  "overall": {
+    "compatible": true,
+    "score": 6,
+    "total": 6
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "memory": 1024,
+  "timeout": 30,
+  "environment": {
+    "NODE_OPTIONS": "--max-old-space-size=1024 --optimize-for-size",
+    "OQS_ENABLE_KEM_ML_KEM": "ON",
+    "OQS_MEMORY_LIMIT": "256"
+  }
+}

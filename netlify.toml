@@ -4,7 +4,27 @@
   publish = "public"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "18.19.1"
+  NPM_VERSION = "10"
+  # OQS library environment variables
+  OQS_ENABLE_KEM_ML_KEM = "ON"
+  OQS_ENABLE_SIG_DILITHIUM = "OFF"
+  OQS_ENABLE_SIG_FALCON = "OFF"
+  OQS_ENABLE_SIG_SPHINCS = "OFF"
+  # Memory optimization for serverless
+  NODE_OPTIONS = "--max-old-space-size=1536 --optimize-for-size --enable-source-maps"
+  # Build optimization
+  NETLIFY_USE_ESBUILD = "true"
+  ESBUILD_FLAGS = "--bundle --minify --tree-shaking"
+  # Native dependencies
+  PYTHON = "python3"
+  CC = "gcc"
+  CXX = "g++"
+  # OQS build optimization
+  CMAKE_BUILD_TYPE = "Release"
+  OQS_BUILD_ONLY_LIB = "ON"
+  # Performance tuning
+  UV_THREADPOOL_SIZE = "8"
 
 [[redirects]]
   from = "/api/*"
@@ -13,7 +33,64 @@
 
 [functions]
   node_bundler = "esbuild"
+  # External node modules that should not be bundled
+  external_node_modules = ["oqs.js", "@mapbox/node-pre-gyp"]
+  # Include native dependencies and binaries
+  included_files = [
+    "node_modules/oqs.js/**/*",
+    "node_modules/oqs.js/lib/**/*",
+    "node_modules/oqs.js/build/**/*",
+    "node_modules/oqs.js/bin/**/*",
+    "node_modules/@mapbox/node-pre-gyp/**/*"
+  ]
+  # Ignore patterns for optimization
+  ignore_patterns = [
+    "node_modules/oqs.js/test/**/*",
+    "node_modules/oqs.js/docs/**/*",
+    "node_modules/oqs.js/examples/**/*",
+    "**/*.md",
+    "**/*.txt"
+  ]
+
+[functions."*"]
+  # Memory and timeout optimization for post-quantum operations
+  memory = 1536
+  timeout = 30
+  runtime = "nodejs18.x"
+
+[functions.encrypt]
+  memory = 1536
+  timeout = 30
+  runtime = "nodejs18.x"
+
+[functions.decrypt]
+  memory = 1536
+  timeout = 30
+  runtime = "nodejs18.x"
+
+[functions.generate-keypair]
+  memory = 1024
+  timeout = 20
+  runtime = "nodejs18.x"
+
+[functions.monitor]
+  memory = 512
+  timeout = 15
+  runtime = "nodejs18.x"
+
+[functions.status]
+  memory = 512
+  timeout = 15
+  runtime = "nodejs18.x"
 
 [dev]
   framework = "#static"
-  port = 8888 
+  port = 8888
+  # Development environment variables
+  [dev.env]
+    NODE_OPTIONS = "--max-old-space-size=1024 --optimize-for-size"
+    OQS_ENABLE_KEM_ML_KEM = "ON"
+    OQS_ENABLE_SIG_DILITHIUM = "OFF"
+    OQS_ENABLE_SIG_FALCON = "OFF"
+    OQS_ENABLE_SIG_SPHINCS = "OFF"
+    UV_THREADPOOL_SIZE = "4" 

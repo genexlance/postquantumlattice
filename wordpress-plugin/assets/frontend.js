@@ -112,22 +112,52 @@
                 // Add loading state to encrypted fields
                 $encryptedFields.addClass('pqls-encrypting');
                 
-                // Show encryption progress
+                // Show encryption progress with post-quantum awareness
                 $encryptedFields.each(function() {
                     var $field = $(this);
                     var $indicator = $field.find('.pqls-field-encryption-indicator');
                     var $text = $indicator.find('.pqls-field-encryption-text');
                     
-                    $text.text('ENCRYPTING...');
+                    // Show appropriate encryption text based on algorithm
+                    var encryptingText = pqls_frontend && pqls_frontend.strings ? 
+                        pqls_frontend.strings.encrypting : 'ENCRYPTING...';
+                    
+                    $text.text(encryptingText);
                     $indicator.addClass('pqls-processing');
+                    
+                    // Add post-quantum visual indicator
+                    if (pqls_frontend && pqls_frontend.is_post_quantum) {
+                        $indicator.addClass('pqls-post-quantum-processing');
+                    }
                 });
                 
-                // Simulate encryption delay (for UX)
+                // Calculate encryption timeout based on algorithm and data size
+                var encryptionTimeout = PQLS_Frontend.calculateEncryptionTimeout($encryptedFields);
+                
+                // Show completion after appropriate delay
                 setTimeout(function() {
                     $encryptedFields.removeClass('pqls-encrypting');
-                    $encryptedFields.find('.pqls-field-encryption-text').text('ENCRYPTED');
-                    $encryptedFields.find('.pqls-field-encryption-indicator').removeClass('pqls-processing');
-                }, 1000);
+                    
+                    $encryptedFields.each(function() {
+                        var $field = $(this);
+                        var $indicator = $field.find('.pqls-field-encryption-indicator');
+                        var $text = $indicator.find('.pqls-field-encryption-text');
+                        
+                        // Show appropriate encrypted text
+                        var encryptedText = pqls_frontend && pqls_frontend.encryption_text ? 
+                            pqls_frontend.encryption_text : 'ENCRYPTED';
+                        
+                        $text.text(encryptedText);
+                        $indicator.removeClass('pqls-processing pqls-post-quantum-processing');
+                        $indicator.addClass('pqls-encrypted-complete');
+                        
+                        // Add success animation
+                        $indicator.addClass('pqls-encryption-success');
+                        setTimeout(function() {
+                            $indicator.removeClass('pqls-encryption-success');
+                        }, 2000);
+                    });
+                }, encryptionTimeout);
             }
         },
         
@@ -173,17 +203,51 @@
         },
         
         showEncryptionInfo: function($indicator, $input) {
+            // Get encryption details from localized data
+            var isPostQuantum = pqls_frontend && pqls_frontend.is_post_quantum;
+            var algorithmName = pqls_frontend && pqls_frontend.strings ? 
+                pqls_frontend.strings.algorithm_name : 'Unknown';
+            var securityLevel = pqls_frontend && pqls_frontend.security_level ? 
+                pqls_frontend.security_level : 'standard';
+            
+            // Create dynamic content based on encryption type
+            var title = isPostQuantum ? '🔐 Post-Quantum Encryption' : '🔒 Encryption';
+            var description = isPostQuantum ? 
+                'This field is protected with <strong>' + algorithmName + '</strong> lattice-based cryptography.' :
+                'This field is protected with <strong>' + algorithmName + '</strong> encryption.';
+            
+            var features = [];
+            if (isPostQuantum) {
+                features.push('✅ Quantum-resistant security');
+                features.push('🛡️ Future-proof protection');
+                features.push('🔐 NIST-approved algorithm');
+                if (securityLevel === 'high') {
+                    features.push('⚡ Maximum security level');
+                } else {
+                    features.push('⚡ Optimized performance');
+                }
+            } else {
+                features.push('🔒 Strong encryption');
+                features.push('🛡️ Data protection');
+                features.push('⚠️ Consider upgrading to post-quantum');
+            }
+            features.push('💾 Encrypted before database storage');
+            
+            var featuresList = features.map(function(feature) {
+                return '<li>' + feature + '</li>';
+            }).join('');
+            
             // Create or show encryption info popup
             var infoId = 'pqls-encryption-info-' + Date.now();
             var $info = $('<div id="' + infoId + '" class="pqls-encryption-info-popup" role="dialog" aria-modal="true">' +
                 '<div class="pqls-info-content">' +
-                    '<h3>🔒 Post-Quantum Encryption</h3>' +
-                    '<p>This field is protected with <strong>ML-KEM-512</strong> lattice-based cryptography.</p>' +
-                    '<ul>' +
-                        '<li>✅ Quantum-resistant security</li>' +
-                        '<li>🛡️ Data encrypted before database storage</li>' +
-                        '<li>🔐 Future-proof protection</li>' +
-                    '</ul>' +
+                    '<h3>' + title + '</h3>' +
+                    '<p>' + description + '</p>' +
+                    '<ul>' + featuresList + '</ul>' +
+                    '<div class="pqls-info-details">' +
+                        '<small><strong>Algorithm:</strong> ' + algorithmName + '</small><br>' +
+                        '<small><strong>Security Level:</strong> ' + securityLevel.charAt(0).toUpperCase() + securityLevel.slice(1) + '</small>' +
+                    '</div>' +
                     '<button type="button" class="pqls-close-info">Close</button>' +
                 '</div>' +
                 '</div>');
@@ -238,6 +302,38 @@
         },
         
         // Utility functions
+        calculateEncryptionTimeout: function($encryptedFields) {
+            var baseTimeout = 800; // Base timeout in milliseconds
+            var fieldCount = $encryptedFields.length;
+            var totalDataSize = 0;
+            
+            // Estimate data size from field values
+            $encryptedFields.each(function() {
+                var $field = $(this);
+                var $input = $field.find('input, textarea, select').first();
+                var value = $input.val() || '';
+                totalDataSize += value.length;
+            });
+            
+            // Calculate timeout based on algorithm and data size
+            var algorithmMultiplier = 1;
+            if (pqls_frontend && pqls_frontend.is_post_quantum) {
+                // Post-quantum encryption may take slightly longer
+                algorithmMultiplier = pqls_frontend.security_level === 'high' ? 1.3 : 1.1;
+            }
+            
+            // Add time based on data size (1ms per character)
+            var sizeTimeout = Math.min(totalDataSize, 2000); // Cap at 2 seconds
+            
+            // Add time based on field count
+            var fieldTimeout = fieldCount * 100;
+            
+            var calculatedTimeout = (baseTimeout + sizeTimeout + fieldTimeout) * algorithmMultiplier;
+            
+            // Ensure minimum and maximum bounds
+            return Math.max(500, Math.min(calculatedTimeout, 3000));
+        },
+        
         debounce: function(func, wait) {
             var timeout;
             return function executedFunction() {
@@ -278,6 +374,19 @@
         
         .pqls-processing {
             background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+        }
+        
+        .pqls-post-quantum-processing {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: 2px solid #4dabf7;
+        }
+        
+        .pqls-encrypted-complete {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%) !important;
+        }
+        
+        .pqls-encryption-success {
+            animation: pqls-success-pulse 1s ease-in-out;
         }
         
         .pqls-field-focused .pqls-field-encryption-indicator {
@@ -345,6 +454,21 @@
             0% { opacity: 1; }
             50% { opacity: 0.7; }
             100% { opacity: 1; }
+        }
+        
+        @keyframes pqls-success-pulse {
+            0% { 
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(86, 171, 47, 0.7);
+            }
+            50% { 
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(86, 171, 47, 0);
+            }
+            100% { 
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(86, 171, 47, 0);
+            }
         }
     `;
     document.head.appendChild(style);
