@@ -1,4 +1,4 @@
-// 3D Lattice Background System
+// 3D Lattice Background System with True 3D Layers and Scroll Rotation
 class LatticePoint {
     constructor(x, y, z) {
         this.x = x;
@@ -9,15 +9,64 @@ class LatticePoint {
         this.baseZ = z;
         this.connections = [];
         this.animationOffset = Math.random() * Math.PI * 2;
-        this.glowIntensity = Math.random() * 0.5 + 0.5;
+        this.screenX = 0;
+        this.screenY = 0;
+        this.screenZ = 0;
+        this.visible = true;
     }
     
-    update(time) {
+    // 3D rotation and projection
+    project(rotationX, rotationY, rotationZ, centerX, centerY) {
+        // Apply 3D rotations
+        let x = this.baseX - centerX;
+        let y = this.baseY - centerY;
+        let z = this.baseZ;
+        
+        // Rotation around Y axis (left-right)
+        let cosY = Math.cos(rotationY);
+        let sinY = Math.sin(rotationY);
+        let tempX = x * cosY - z * sinY;
+        let tempZ = x * sinY + z * cosY;
+        x = tempX;
+        z = tempZ;
+        
+        // Rotation around X axis (up-down)
+        let cosX = Math.cos(rotationX);
+        let sinX = Math.sin(rotationX);
+        let tempY = y * cosX - z * sinX;
+        tempZ = y * sinX + z * cosX;
+        y = tempY;
+        z = tempZ;
+        
+        // Rotation around Z axis (roll)
+        let cosZ = Math.cos(rotationZ);
+        let sinZ = Math.sin(rotationZ);
+        tempX = x * cosZ - y * sinZ;
+        tempY = x * sinZ + y * cosZ;
+        x = tempX;
+        y = tempY;
+        
+        // 3D to 2D projection with perspective
+        const perspective = 800;
+        const scale = perspective / (perspective + z);
+        
+        this.screenX = (x * scale) + centerX;
+        this.screenY = (y * scale) + centerY;
+        this.screenZ = z;
+        this.visible = z > -400; // Only show points not too far behind
+        
+        return scale;
+    }
+    
+    update(time, rotationX, rotationY, rotationZ, centerX, centerY) {
         // Subtle floating animation
-        const floatAmount = 2;
-        this.x = this.baseX + Math.sin(time * 0.001 + this.animationOffset) * floatAmount;
-        this.y = this.baseY + Math.cos(time * 0.0008 + this.animationOffset) * floatAmount;
-        this.z = this.baseZ + Math.sin(time * 0.0012 + this.animationOffset) * floatAmount;
+        const floatAmount = 1;
+        this.baseX = this.x + Math.sin(time * 0.0008 + this.animationOffset) * floatAmount;
+        this.baseY = this.y + Math.cos(time * 0.0006 + this.animationOffset) * floatAmount;
+        this.baseZ = this.z + Math.sin(time * 0.001 + this.animationOffset) * floatAmount;
+        
+        // Project to screen coordinates
+        return this.project(rotationX, rotationY, rotationZ, centerX, centerY);
     }
 }
 
@@ -28,13 +77,10 @@ class LatticeBackground {
         this.points = [];
         this.animationId = null;
         this.lastTime = 0;
-        
-        this.colors = {
-            purple: 'rgba(139, 92, 246, ',
-            indigo: 'rgba(99, 102, 241, ',
-            teal: 'rgba(20, 184, 166, ',
-            pink: 'rgba(236, 72, 153, '
-        };
+        this.scrollY = 0;
+        this.rotationX = 0;
+        this.rotationY = 0;
+        this.rotationZ = 0;
         
         this.init();
         this.setupEventListeners();
@@ -58,44 +104,41 @@ class LatticeBackground {
         this.ctx.scale(dpr, dpr);
         this.width = rect.width;
         this.height = rect.height;
+        this.centerX = this.width / 2;
+        this.centerY = this.height / 2;
     }
     
     generateLattice() {
         this.points = [];
         
-        // Responsive grid spacing and performance optimization
+        // Create true 3D lattice with multiple layers
         const isMobile = window.innerWidth < 768;
         const isTablet = window.innerWidth < 1024;
         
-        const spacing = isMobile ? 80 : isTablet ? 70 : 60;
-        const layers = isMobile ? 2 : 3; // Reduce layers on mobile for performance
-        const maxPoints = isMobile ? 150 : isTablet ? 300 : 500; // Limit points for performance
+        const spacing = isMobile ? 100 : isTablet ? 80 : 70;
+        const layers = isMobile ? 4 : isTablet ? 6 : 8; // More layers for true 3D effect
+        const gridSize = isMobile ? 6 : isTablet ? 8 : 10; // Grid dimensions
         
-        const cols = Math.ceil(this.width / spacing) + 2;
-        const rows = Math.ceil(this.height / spacing) + 2;
-        
-        // Generate grid points with performance limits
-        let pointCount = 0;
-        for (let layer = 0; layer < layers && pointCount < maxPoints; layer++) {
-            for (let row = 0; row < rows && pointCount < maxPoints; row++) {
-                for (let col = 0; col < cols && pointCount < maxPoints; col++) {
-                    const x = col * spacing - spacing;
-                    const y = row * spacing - spacing;
-                    const z = (layer - 1) * 50; // Z-depth
+        // Generate 3D lattice cube
+        for (let layer = 0; layer < layers; layer++) {
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const x = (col - gridSize/2) * spacing;
+                    const y = (row - gridSize/2) * spacing;
+                    const z = (layer - layers/2) * spacing;
                     
                     const point = new LatticePoint(x, y, z);
                     this.points.push(point);
-                    pointCount++;
                 }
             }
         }
         
-        // Generate connections
+        // Generate connections between nearby points
         this.generateConnections();
     }
     
     generateConnections() {
-        const maxDistance = 120;
+        const maxDistance = window.innerWidth < 768 ? 120 : 100;
         
         this.points.forEach(point => {
             point.connections = [];
@@ -103,12 +146,13 @@ class LatticeBackground {
             this.points.forEach(otherPoint => {
                 if (point === otherPoint) return;
                 
-                const dx = point.baseX - otherPoint.baseX;
-                const dy = point.baseY - otherPoint.baseY;
-                const dz = point.baseZ - otherPoint.baseZ;
+                const dx = point.x - otherPoint.x;
+                const dy = point.y - otherPoint.y;
+                const dz = point.z - otherPoint.z;
                 const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
                 
-                if (distance < maxDistance && Math.random() > 0.7) {
+                // Connect to nearby points (creating lattice structure)
+                if (distance < maxDistance && distance > 0) {
                     point.connections.push({
                         point: otherPoint,
                         distance: distance,
@@ -119,68 +163,92 @@ class LatticeBackground {
         });
     }
     
+    updateRotation() {
+        // Scroll-based rotation for revealing 3D depth
+        const scrollProgress = window.pageYOffset / (document.body.scrollHeight - window.innerHeight);
+        
+        this.rotationY = scrollProgress * Math.PI * 2; // Full rotation based on scroll
+        this.rotationX = Math.sin(scrollProgress * Math.PI) * 0.3; // Subtle X rotation
+        this.rotationZ = scrollProgress * 0.2; // Slight roll
+    }
+    
     animate(currentTime = 0) {
-        const deltaTime = currentTime - this.lastTime;
         this.lastTime = currentTime;
         
         // Clear canvas
         this.ctx.clearRect(0, 0, this.width, this.height);
         
-        // Update points
-        this.points.forEach(point => point.update(currentTime));
+        // Update rotation based on scroll
+        this.updateRotation();
         
-        // Draw connections
-        this.drawConnections();
+        // Update and project all points
+        const projectedPoints = [];
+        this.points.forEach(point => {
+            const scale = point.update(currentTime, this.rotationX, this.rotationY, this.rotationZ, this.centerX, this.centerY);
+            if (point.visible) {
+                projectedPoints.push({ point, scale });
+            }
+        });
         
-        // Draw points
-        this.drawPoints();
+        // Sort points by Z-depth for proper rendering
+        projectedPoints.sort((a, b) => b.point.screenZ - a.point.screenZ);
+        
+        // Draw connections first (behind points)
+        this.drawConnections(projectedPoints);
+        
+        // Draw points on top
+        this.drawPoints(projectedPoints);
         
         this.animationId = requestAnimationFrame((time) => this.animate(time));
     }
     
-    drawConnections() {
-        this.points.forEach(point => {
+    drawConnections(projectedPoints) {
+        projectedPoints.forEach(({ point }) => {
             point.connections.forEach(connection => {
-                const opacity = connection.strength * 0.3;
-                const colorKeys = Object.keys(this.colors);
-                const colorKey = colorKeys[Math.floor(Math.random() * colorKeys.length)];
+                if (!connection.point.visible) return;
                 
-                this.ctx.strokeStyle = this.colors[colorKey] + opacity + ')';
-                this.ctx.lineWidth = 1;
+                // White connections with opacity based on depth and distance
+                const depthOpacity = Math.max(0.1, 1 - Math.abs(point.screenZ) / 300);
+                const opacity = connection.strength * depthOpacity * 0.2;
+                
+                this.ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+                this.ctx.lineWidth = 0.5;
                 this.ctx.beginPath();
-                this.ctx.moveTo(point.x, point.y);
-                this.ctx.lineTo(connection.point.x, connection.point.y);
+                this.ctx.moveTo(point.screenX, point.screenY);
+                this.ctx.lineTo(connection.point.screenX, connection.point.screenY);
                 this.ctx.stroke();
             });
         });
     }
     
-    drawPoints() {
-        this.points.forEach(point => {
-            const size = 2 + (point.z + 50) / 50; // Size based on Z-depth
-            const opacity = (0.4 + (point.z + 50) / 100) * point.glowIntensity;
+    drawPoints(projectedPoints) {
+        projectedPoints.forEach(({ point, scale }) => {
+            // White nodes with size and opacity based on depth
+            const baseSize = 2;
+            const size = baseSize * scale;
+            const depthOpacity = Math.max(0.1, 1 - Math.abs(point.screenZ) / 400);
+            const opacity = depthOpacity * 0.6;
             
-            // Glow effect
+            // Subtle glow effect
             const gradient = this.ctx.createRadialGradient(
-                point.x, point.y, 0,
-                point.x, point.y, size * 3
+                point.screenX, point.screenY, 0,
+                point.screenX, point.screenY, size * 4
             );
             
-            const colorKeys = Object.keys(this.colors);
-            const colorKey = colorKeys[Math.floor(point.animationOffset * colorKeys.length) % colorKeys.length];
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
+            gradient.addColorStop(0.5, `rgba(255, 255, 255, ${opacity * 0.5})`);
+            gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
             
-            gradient.addColorStop(0, this.colors[colorKey] + opacity + ')');
-            gradient.addColorStop(1, this.colors[colorKey] + '0)');
-            
+            // Draw glow
             this.ctx.fillStyle = gradient;
             this.ctx.beginPath();
-            this.ctx.arc(point.x, point.y, size * 3, 0, Math.PI * 2);
+            this.ctx.arc(point.screenX, point.screenY, size * 4, 0, Math.PI * 2);
             this.ctx.fill();
             
-            // Core point
-            this.ctx.fillStyle = this.colors[colorKey] + (opacity * 2) + ')';
+            // Draw core point
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 1.5})`;
             this.ctx.beginPath();
-            this.ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+            this.ctx.arc(point.screenX, point.screenY, size, 0, Math.PI * 2);
             this.ctx.fill();
         });
     }
