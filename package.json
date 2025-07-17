@@ -51,7 +51,7 @@
     "express-rate-limit": "^6.7.0",
     "helmet": "^6.1.5",
     "joi": "^17.9.2",
-    "oqs.js": "^0.2.0",
+    "oqs.js": "^0.1.0",
     "@mapbox/node-pre-gyp": "^1.0.11",
     "node-gyp": "^10.0.1"
   },
