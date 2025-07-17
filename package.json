@@ -75,18 +75,7 @@
   ],
   "netlify": {
     "functions": {
-      "node_bundler": "esbuild",
-      "external_node_modules": ["oqs.js", "@mapbox/node-pre-gyp"],
-      "included_files": [
-        "node_modules/oqs.js/**/*",
-        "node_modules/oqs.js/lib/**/*",
-        "node_modules/oqs.js/build/**/*",
-        "node_modules/oqs.js/bin/**/*",
-        "node_modules/@mapbox/node-pre-gyp/**/*"
-      ]
+      "node_bundler": "esbuild"
     }
-  },
-  "bundleDependencies": [
-    "oqs.js"
-  ]
+  }
 }
