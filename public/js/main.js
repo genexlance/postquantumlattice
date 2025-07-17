@@ -212,9 +212,9 @@ class LatticeBackground {
             point.connections.forEach(connection => {
                 if (!connection.point.visible) return;
                 
-                // White connections with opacity based on depth and distance
-                const depthOpacity = Math.max(0.1, 1 - Math.abs(point.screenZ) / 300);
-                const opacity = connection.strength * depthOpacity * 0.2;
+                // Much more subtle white connections
+                const depthOpacity = Math.max(0.05, 1 - Math.abs(point.screenZ) / 300);
+                const opacity = connection.strength * depthOpacity * 0.08; // Reduced from 0.2 to 0.08
                 
                 this.ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
                 this.ctx.lineWidth = 0.5;
@@ -228,32 +228,32 @@ class LatticeBackground {
     
     drawPoints(projectedPoints) {
         projectedPoints.forEach(({ point, scale }) => {
-            // White nodes with size and opacity based on depth
+            // Much more subtle white nodes with reduced opacity
             const baseSize = 2;
             const size = baseSize * scale;
-            const depthOpacity = Math.max(0.1, 1 - Math.abs(point.screenZ) / 400);
-            const opacity = depthOpacity * 0.6;
+            const depthOpacity = Math.max(0.05, 1 - Math.abs(point.screenZ) / 400);
+            const opacity = depthOpacity * 0.25; // Reduced from 0.6 to 0.25 for subtlety
             
-            // Subtle glow effect
+            // Very subtle glow effect
             const gradient = this.ctx.createRadialGradient(
                 point.screenX, point.screenY, 0,
-                point.screenX, point.screenY, size * 4
+                point.screenX, point.screenY, size * 3 // Reduced glow radius
             );
             
-            gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
-            gradient.addColorStop(0.5, `rgba(255, 255, 255, ${opacity * 0.5})`);
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.8})`);
+            gradient.addColorStop(0.7, `rgba(255, 255, 255, ${opacity * 0.3})`);
             gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
             
-            // Draw glow
+            // Draw subtle glow
             this.ctx.fillStyle = gradient;
             this.ctx.beginPath();
-            this.ctx.arc(point.screenX, point.screenY, size * 4, 0, Math.PI * 2);
+            this.ctx.arc(point.screenX, point.screenY, size * 3, 0, Math.PI * 2);
             this.ctx.fill();
             
-            // Draw core point
-            this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 1.5})`;
+            // Draw very subtle core point
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 1.2})`; // Reduced brightness
             this.ctx.beginPath();
-            this.ctx.arc(point.screenX, point.screenY, size, 0, Math.PI * 2);
+            this.ctx.arc(point.screenX, point.screenY, size * 0.8, 0, Math.PI * 2); // Slightly smaller core
             this.ctx.fill();
         });
     }
