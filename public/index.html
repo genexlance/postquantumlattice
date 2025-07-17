@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Post Quantum Lattice Shield - Secure Form Encryption</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@300;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+    <canvas id="lattice-canvas"></canvas>
     <header>
         <nav class="navbar">
             <div class="nav-brand">
@@ -37,22 +41,22 @@
             <div class="container">
                 <h2>Features</h2>
                 <div class="features-grid">
-                    <div class="feature-card">
+                    <div class="feature-card aurora-border">
                         <div class="feature-icon">🔒</div>
                         <h3>Post-Quantum Security</h3>
                         <p>Uses Kyber lattice-based encryption that's resistant to quantum computer attacks.</p>
                     </div>
-                    <div class="feature-card">
+                    <div class="feature-card aurora-border">
                         <div class="feature-icon">⚡</div>
                         <h3>Seamless Integration</h3>
                         <p>Integrates directly with Gravity Forms - no complex setup required.</p>
                     </div>
-                    <div class="feature-card">
+                    <div class="feature-card aurora-border">
                         <div class="feature-icon">🌐</div>
                         <h3>Cloud-Powered</h3>
                         <p>Serverless microservice hosted on Netlify for reliability and scalability.</p>
                     </div>
-                    <div class="feature-card">
+                    <div class="feature-card aurora-border">
                         <div class="feature-icon">🔧</div>
                         <h3>Easy Configuration</h3>
                         <p>Simple admin interface to select which form fields to encrypt.</p>
@@ -65,7 +69,7 @@
             <div class="container">
                 <h2>API Endpoints</h2>
                 <div class="api-grid">
-                    <div class="api-card">
+                    <div class="api-card aurora-border">
                         <h3>POST /api/encrypt</h3>
                         <p>Encrypts form data using provided public key</p>
                         <div class="api-example">
@@ -75,18 +79,18 @@
   "payload": "sensitive_data_to_encrypt"
 }</code></pre>
                             <h4>Response:</h4>
-                                                         <pre><code>{
+                            <pre><code>{
    "encrypted": "base64_encoded_ciphertext",
    "algorithm": "ml-kem-512"
  }</code></pre>
                         </div>
                     </div>
-                    <div class="api-card">
+                    <div class="api-card aurora-border">
                         <h3>GET /api/generate-keypair</h3>
                         <p>Generates a new Kyber keypair (development/testing only)</p>
                         <div class="api-example">
                             <h4>Response:</h4>
-                                                         <pre><code>{
+                            <pre><code>{
    "publicKey": "base64_encoded_public_key",
    "privateKey": "base64_encoded_private_key",
    "algorithm": "ml-kem-512"
@@ -125,17 +129,17 @@
             <div class="container">
                 <h2>Documentation</h2>
                 <div class="docs-grid">
-                    <div class="doc-card">
+                    <div class="doc-card aurora-border">
                         <h3>Installation Guide</h3>
                         <p>Step-by-step instructions for installing and configuring the plugin.</p>
                         <a href="#" class="btn btn-outline">Coming Soon</a>
                     </div>
-                    <div class="doc-card">
+                    <div class="doc-card aurora-border">
                         <h3>API Reference</h3>
                         <p>Complete API documentation for developers.</p>
                         <a href="#" class="btn btn-outline">Coming Soon</a>
                     </div>
-                    <div class="doc-card">
+                    <div class="doc-card aurora-border">
                         <h3>Security Guide</h3>
                         <p>Best practices for post-quantum cryptography implementation.</p>
                         <a href="#" class="btn btn-outline">Coming Soon</a>
