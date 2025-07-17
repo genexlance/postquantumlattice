@@ -2,7 +2,7 @@
 :root {
   /* Dark theme base colors */
   --bg-primary: #0a0a0f;
-  --bg-secondary: #1a1a2e;
+  --bg-secondary: #121216;
   --bg-tertiary: #16213e;
   --bg-card: rgba(26, 26, 46, 0.8);
   
@@ -10,7 +10,7 @@
   --aurora-purple: #8b5cf6;
   --aurora-indigo: #6366f1;
   --aurora-teal: #14b8a6;
-  --aurora-pink: #ec4899;
+  --aurora-pink: #1d07e2;
   
   /* Text colors */
   --text-primary: #f8fafc;
@@ -231,7 +231,7 @@ p {
 }
 
 .hero-content {
-  max-width: 800px;
+  max-width: ⚛ The Lattice ⚛px;
   margin: 0 auto;
 }
 
