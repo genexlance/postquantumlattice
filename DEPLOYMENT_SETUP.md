@@ -98,7 +98,7 @@ NODE_ENV=development
 1. Install and activate the Post-Quantum Lattice Shield WordPress plugin
 2. Go to **WordPress Admin** > **Settings** > **Post-Quantum Lattice Shield**
 3. Configure the following settings:
-   - **Microservice URL:** Your Netlify site URL (e.g., `https://your-site.netlify.app`)
+   - **Microservice URL:** Your Netlify site URL (e.g., `https://postquantumlatticeshield.netlify.app/`)
    - **API Key:** The same API key you set in Netlify
    - **Security Level:** Choose between "Standard" (ML-KEM-768) or "High" (ML-KEM-1024)
 4. Click **Save Settings**
@@ -110,7 +110,7 @@ NODE_ENV=development
 
 ```bash
 # Test that functions are deployed and accessible
-curl https://your-site.netlify.app/.netlify/functions/status
+curl https://postquantumlatticeshield.netlify.app/.netlify/functions/status
 ```
 
 **Expected Response:**
@@ -130,24 +130,24 @@ curl https://your-site.netlify.app/.netlify/functions/status
 
 ```bash
 # Test keypair generation
-curl https://your-site.netlify.app/.netlify/functions/generate-keypair
+curl https://postquantumlatticeshield.netlify.app/.netlify/functions/generate-keypair
 ```
 
 ### Test 3: Encryption/Decryption Workflow
 
 ```bash
 # 1. Generate a keypair
-KEYPAIR=$(curl -s https://your-site.netlify.app/.netlify/functions/generate-keypair)
+KEYPAIR=$(curl -s https://postquantumlatticeshield.netlify.app/.netlify/functions/generate-keypair)
 PUBLIC_KEY=$(echo $KEYPAIR | jq -r '.publicKey')
 PRIVATE_KEY=$(echo $KEYPAIR | jq -r '.privateKey')
 
 # 2. Encrypt test data
-ENCRYPTED=$(curl -s -X POST https://your-site.netlify.app/.netlify/functions/encrypt \
+ENCRYPTED=$(curl -s -X POST https://postquantumlatticeshield.netlify.app/.netlify/functions/encrypt \
   -H "Content-Type: application/json" \
   -d "{\"data\":\"Hello, Post-Quantum World!\",\"publicKey\":\"$PUBLIC_KEY\"}")
 
 # 3. Decrypt the data
-curl -X POST https://your-site.netlify.app/.netlify/functions/decrypt \
+curl -X POST https://postquantumlatticeshield.netlify.app/.netlify/functions/decrypt \
   -H "Authorization: Bearer your-api-key-here" \
   -H "Content-Type: application/json" \
   -d "{\"encryptedData\":$ENCRYPTED,\"privateKey\":\"$PRIVATE_KEY\"}"

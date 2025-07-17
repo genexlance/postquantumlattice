@@ -43,7 +43,7 @@ A WordPress plugin that secures form data using post-quantum ML-KEM-512 encrypti
 ### Microservice URL
 Enter the URL of your deployed Netlify microservice:
 ```
-https://your-site.netlify.app/api
+https://postquantumlatticeshield.netlify.app/api
 ```
 
 ### Field Selection

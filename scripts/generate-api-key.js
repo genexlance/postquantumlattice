@@ -112,7 +112,7 @@ function displaySetupInstructions(apiKey) {
     console.log('4. 🧪 Test the Setup:');
     console.log('   a. Use the WordPress plugin test functionality');
     console.log('   b. Or test directly with curl:');
-    console.log(`   curl -X POST https://your-site.netlify.app/.netlify/functions/decrypt \\`);
+    console.log(`   curl -X POST https://postquantumlatticeshield.netlify.app/.netlify/functions/decrypt \\`);
     console.log(`        -H "Authorization: Bearer ${apiKey}" \\`);
     console.log(`        -H "Content-Type: application/json" \\`);
     console.log(`        -d '{"encryptedData":"test","privateKey":"test"}'`);

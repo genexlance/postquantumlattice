@@ -13,9 +13,9 @@
       "algorithm": "ML-KEM-768",
       "success": true,
       "timing": {
-        "total": 1,
-        "keypair": 1,
-        "encapsulation": 1,
+        "total": 0,
+        "keypair": 0,
+        "encapsulation": 0,
         "decapsulation": 0
       },
       "sizes": {
@@ -29,8 +29,8 @@
       "algorithm": "ML-KEM-1024",
       "success": true,
       "timing": {
-        "total": 0,
-        "keypair": 0,
+        "total": 1,
+        "keypair": 1,
         "encapsulation": 0,
         "decapsulation": 0
       },

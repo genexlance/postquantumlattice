@@ -245,7 +245,7 @@ class PostQuantumLatticeShield {
     public function admin_page() {
         $settings = get_option($this->option_name, array());
         $public_key = get_option('pqls_public_key');
-        $algorithm = get_option('pqls_algorithm', 'ml-kem-512');
+        $algorithm = get_option('pqls_algorithm', 'ML-KEM-768');
         $key_generated = get_option('pqls_key_generated');
         
         // Ensure encrypted_fields is an array
@@ -631,8 +631,10 @@ class PostQuantumLatticeShield {
      * Check if algorithm is RSA-based
      */
     private function is_rsa_algorithm($algorithm) {
-        return strpos(strtolower($algorithm), 'rsa') !== false || 
-               strpos(strtolower($algorithm), 'ml-kem') === false;
+        $algorithm_lower = strtolower($algorithm);
+        return strpos($algorithm_lower, 'rsa') !== false || 
+               strpos($algorithm_lower, 'oaep') !== false ||
+               (strpos($algorithm_lower, 'ml-kem') === false && strpos($algorithm_lower, 'kyber') === false);
     }
     
     /**
@@ -776,7 +778,7 @@ class PostQuantumLatticeShield {
         }
         
         $public_key = get_option('pqls_public_key');
-        $algorithm = get_option('pqls_algorithm', 'rsa-oaep-256');
+        $algorithm = get_option('pqls_algorithm', 'ML-KEM-768');
         
         if (empty($public_key)) {
             error_log('PQLS: Public key not set, cannot encrypt.');

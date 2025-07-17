@@ -1,11 +1,15 @@
 [build]
-  command = "npm run build"
+  command = "npm rebuild oqs.js && npm run build"
   functions = "netlify/functions"
   publish = "public"
 
 [build.environment]
   NODE_VERSION = "18.19.1"
   NPM_VERSION = "10"
+  # Force rebuild of native dependencies for Linux x64
+  npm_config_target_platform = "linux"
+  npm_config_target_arch = "x64"
+  npm_config_cache = "/opt/buildhome/.npm"
   # OQS library environment variables
   OQS_ENABLE_KEM_ML_KEM = "ON"
   OQS_ENABLE_SIG_DILITHIUM = "OFF"
@@ -27,6 +31,8 @@
   UV_THREADPOOL_SIZE = "8"
   # Security - API Key for decryption endpoint (set in Netlify dashboard)
   # PQLS_API_KEY = "your-secure-api-key-here"
+  # Security - API Key for decryption endpoint (set in Netlify dashboard)
+  # PQLS_API_KEY = "your-secure-api-key-here"
 
 [[redirects]]
   from = "/api/*"
@@ -46,13 +52,12 @@
     "node_modules/@mapbox/node-pre-gyp/**/*"
   ]
   # Ignore patterns for optimization
-  ignore_patterns = [
-    "node_modules/oqs.js/test/**/*",
-    "node_modules/oqs.js/docs/**/*",
-    "node_modules/oqs.js/examples/**/*",
-    "**/*.md",
-    "**/*.txt"
-  ]
+  [functions.ignore_patterns]
+    external_node_modules = [
+      "oqs.js/test/**/*",
+      "oqs.js/docs/**/*",
+      "oqs.js/examples/**/*"
+    ]
 
 [functions."*"]
   # Memory and timeout optimization for post-quantum operations
