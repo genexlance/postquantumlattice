@@ -1,5 +1,5 @@
 [build]
-  command = "npm rebuild oqs.js || echo 'OQS rebuild failed, continuing with graceful fallback' && npm run build"
+  command = "echo 'Skipping OQS rebuild for graceful fallback deployment' && npm run build:plugin"
   functions = "netlify/functions"
   publish = "public"
 
