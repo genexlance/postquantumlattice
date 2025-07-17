@@ -17,9 +17,9 @@ class LatticePoint {
     
     // 3D rotation and projection
     project(rotationX, rotationY, rotationZ, centerX, centerY) {
-        // Apply 3D rotations
-        let x = this.baseX - centerX;
-        let y = this.baseY - centerY;
+        // Apply 3D rotations (no centering offset here - we want the lattice to extend infinitely)
+        let x = this.baseX;
+        let y = this.baseY;
         let z = this.baseZ;
         
         // Rotation around Y axis (left-right)
@@ -111,20 +111,25 @@ class LatticeBackground {
     generateLattice() {
         this.points = [];
         
-        // Create true 3D lattice with multiple layers
+        // Create infinite-appearing 3D lattice that covers entire screen
         const isMobile = window.innerWidth < 768;
         const isTablet = window.innerWidth < 1024;
         
         const spacing = isMobile ? 100 : isTablet ? 80 : 70;
-        const layers = isMobile ? 4 : isTablet ? 6 : 8; // More layers for true 3D effect
-        const gridSize = isMobile ? 6 : isTablet ? 8 : 10; // Grid dimensions
+        const layers = isMobile ? 6 : isTablet ? 8 : 10; // More layers for true 3D effect
         
-        // Generate 3D lattice cube
+        // Calculate grid size to cover screen plus extra for infinite effect
+        const extraSpace = 400; // Extra space beyond screen edges
+        const cols = Math.ceil((this.width + extraSpace * 2) / spacing);
+        const rows = Math.ceil((this.height + extraSpace * 2) / spacing);
+        
+        // Generate 3D lattice that extends beyond screen boundaries
         for (let layer = 0; layer < layers; layer++) {
-            for (let row = 0; row < gridSize; row++) {
-                for (let col = 0; col < gridSize; col++) {
-                    const x = (col - gridSize/2) * spacing;
-                    const y = (row - gridSize/2) * spacing;
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    // Position points to cover screen area plus extra space
+                    const x = (col * spacing) - extraSpace - (this.width / 2);
+                    const y = (row * spacing) - extraSpace - (this.height / 2);
                     const z = (layer - layers/2) * spacing;
                     
                     const point = new LatticePoint(x, y, z);
@@ -165,7 +170,7 @@ class LatticeBackground {
     
     updateRotation() {
         // Scroll-based rotation for revealing 3D depth
-        const scrollProgress = window.pageYOffset / (document.body.scrollHeight - window.innerHeight);
+        const scrollProgress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
         
         this.rotationY = scrollProgress * Math.PI * 2; // Full rotation based on scroll
         this.rotationX = Math.sin(scrollProgress * Math.PI) * 0.3; // Subtle X rotation
