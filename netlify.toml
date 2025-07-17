@@ -4,7 +4,7 @@
   publish = "public"
 
 [build.environment]
-  NODE_VERSION = "18.19.1"
+  NODE_VERSION = "18.19.0"
   NPM_VERSION = "10"
   # Force rebuild of native dependencies for Linux x64
   npm_config_target_platform = "linux"
@@ -15,8 +15,8 @@
   OQS_ENABLE_SIG_DILITHIUM = "OFF"
   OQS_ENABLE_SIG_FALCON = "OFF"
   OQS_ENABLE_SIG_SPHINCS = "OFF"
-  # Memory optimization for serverless
-  NODE_OPTIONS = "--max-old-space-size=1536 --optimize-for-size --enable-source-maps"
+  # Memory optimization for serverless (removed --optimize-for-size as it's not allowed)
+  NODE_OPTIONS = "--max-old-space-size=1536 --enable-source-maps"
   # Build optimization
   NETLIFY_USE_ESBUILD = "true"
   ESBUILD_FLAGS = "--bundle --minify --tree-shaking"
@@ -30,9 +30,7 @@
   # Performance tuning
   UV_THREADPOOL_SIZE = "8"
   # Security - API Key for decryption endpoint (set in Netlify dashboard)
-  # PQLS_API_KEY = "your-secure-api-key-here"
-  # Security - API Key for decryption endpoint (set in Netlify dashboard)
-  # PQLS_API_KEY = "your-secure-api-key-here"
+  PQLS_API_KEY = "dev-api-key-12345-change-in-production"
 
 [[redirects]]
   from = "/api/*"
@@ -95,7 +93,7 @@
   port = 8888
   # Development environment variables
   [dev.env]
-    NODE_OPTIONS = "--max-old-space-size=1024 --optimize-for-size"
+    NODE_OPTIONS = "--max-old-space-size=1024"
     OQS_ENABLE_KEM_ML_KEM = "ON"
     OQS_ENABLE_SIG_DILITHIUM = "OFF"
     OQS_ENABLE_SIG_FALCON = "OFF"
