@@ -32,7 +32,7 @@ A WordPress plugin that secures form data using post-quantum ML-KEM-512 encrypti
    - Activate the plugin
 
 3. **Configure Settings**
-   - Go to Settings → PQ Lattice Shield
+   - Go to Settings → ⚛ The Lattice ⚛
    - Enter your microservice URL
    - Test the connection
    - Select fields to encrypt

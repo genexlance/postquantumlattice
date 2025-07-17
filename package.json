@@ -7,7 +7,7 @@
     "dev": "npm run verify:runtime && netlify dev",
     "build": "npm run verify:runtime && npm run build:functions && npm run build:plugin",
     "build:functions": "node scripts/prepare-deployment.js && npm run optimize:functions",
-    "build:plugin": "zip -r public/plugin-download/postquantumlatticeshield.zip wordpress-plugin -x 'wordpress-plugin/.*' -x 'wordpress-plugin/__MACOSX'",
+    "build:plugin": "node scripts/build-plugin.js",
     "install:oqs": "npm run check:oqs || npm run install:oqs-deps",
     "check:oqs": "node -e \"try { require('oqs.js'); console.log('OQS library available'); } catch(e) { console.error('OQS library not available:', e.message); process.exit(1); }\"",
     "install:oqs-deps": "npm rebuild oqs.js",

@@ -196,7 +196,7 @@ class PostQuantumLatticeShield {
     public function add_admin_menu() {
         add_options_page(
             __('Post Quantum Lattice Shield Settings', 'pqls'),
-            __('PQ Lattice Shield', 'pqls'),
+            __('⚛ The Lattice ⚛', 'pqls'),
             'manage_pqls',
             'pqls-settings',
             array($this, 'admin_page')
