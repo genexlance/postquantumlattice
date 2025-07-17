@@ -25,6 +25,8 @@
   OQS_BUILD_ONLY_LIB = "ON"
   # Performance tuning
   UV_THREADPOOL_SIZE = "8"
+  # Security - API Key for decryption endpoint (set in Netlify dashboard)
+  # PQLS_API_KEY = "your-secure-api-key-here"
 
 [[redirects]]
   from = "/api/*"
@@ -93,4 +95,6 @@
     OQS_ENABLE_SIG_DILITHIUM = "OFF"
     OQS_ENABLE_SIG_FALCON = "OFF"
     OQS_ENABLE_SIG_SPHINCS = "OFF"
-    UV_THREADPOOL_SIZE = "4" 
+    UV_THREADPOOL_SIZE = "4"
+    # Development API key (replace with secure key in production)
+    PQLS_API_KEY = "dev-api-key-12345-change-in-production" 

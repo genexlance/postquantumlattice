@@ -31,6 +31,7 @@
     "test:all": "npm run test:oqs && npm run test:coverage",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "generate:api-key": "node scripts/generate-api-key.js",
     "postinstall": "npm run check:oqs || echo 'OQS library will be installed during build'"
   },
   "keywords": [
