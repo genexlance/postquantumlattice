@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: Post Quantum Lattice Shield
- * Plugin URI: https://github.com/your-username/post-quantum-lattice-shield
+ * Plugin Name: The Lattice
+ * Plugin URI: https://github.com/genexlance/postquantumlatticeshield
  * Description: Secure form data encryption using post-quantum cryptography (ML-KEM-768/1024) with RSA fallback. Integrates with Gravity Forms to encrypt sensitive field data with quantum-resistant security.
  * Version: 1.1.0
  * Author: Your Name
@@ -771,7 +771,21 @@ class PostQuantumLatticeShield {
      */
     public function pre_submission_encrypt($form) {
         $settings = get_option($this->option_name, array());
-        $encrypted_fields = $settings['encrypted_fields'][$form['id']] ?? [];
+        $all_encrypted_fields = $settings['encrypted_fields'] ?? [];
+        
+        // Ensure it's an array
+        if (!is_array($all_encrypted_fields)) {
+            $all_encrypted_fields = [];
+        }
+        
+        // Filter encrypted fields for this specific form
+        $encrypted_fields = [];
+        foreach ($all_encrypted_fields as $field_key) {
+            if (strpos($field_key, $form['id'] . '_') === 0) {
+                $field_id = str_replace($form['id'] . '_', '', $field_key);
+                $encrypted_fields[] = $field_id;
+            }
+        }
         
         if (empty($encrypted_fields)) {
             return $form;
@@ -838,6 +852,7 @@ class PostQuantumLatticeShield {
         $request_body = [
             'data' => $data,
             'publicKey' => trim($public_key),
+            'algorithm' => $algorithm,  // Required parameter for the API
             'metadata' => [
                 'form_id' => $form_id,
                 'field_id' => $field_id,
@@ -1953,10 +1968,24 @@ class PostQuantumLatticeShield {
             
             // Add field-level validation errors for encrypted fields
             $settings = get_option($this->option_name, array());
-            $encrypted_fields = $settings['encrypted_fields'][$form['id']] ?? [];
+            $all_encrypted_fields = $settings['encrypted_fields'] ?? [];
+            
+            // Ensure it's an array
+            if (!is_array($all_encrypted_fields)) {
+                $all_encrypted_fields = [];
+            }
+            
+            // Filter encrypted fields for this specific form
+            $encrypted_field_ids = [];
+            foreach ($all_encrypted_fields as $field_key) {
+                if (strpos($field_key, $form['id'] . '_') === 0) {
+                    $field_id = str_replace($form['id'] . '_', '', $field_key);
+                    $encrypted_field_ids[] = $field_id;
+                }
+            }
             
             foreach ($form['fields'] as &$field) {
-                if (in_array($field->id, $encrypted_fields)) {
+                if (in_array($field->id, $encrypted_field_ids)) {
                     $field->failed_validation = true;
                     $field->validation_message = __('This field could not be encrypted. Please try again.', 'pqls');
                 }
