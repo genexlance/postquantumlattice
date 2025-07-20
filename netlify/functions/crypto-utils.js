@@ -1,5 +1,213 @@
 const crypto = require('crypto');
 
+/**
+ * RSA Fallback Cryptography utilities
+ * Provides RSA-based encryption/decryption when OQS library is unavailable
+ */
+class RSAFallbackCrypto {
+    static ERROR_CODES = {
+        KEYPAIR_GENERATION_FAILED: 'RSA_KEYPAIR_GENERATION_FAILED',
+        ENCRYPTION_FAILED: 'RSA_ENCRYPTION_FAILED',
+        DECRYPTION_FAILED: 'RSA_DECRYPTION_FAILED',
+        INVALID_KEY_FORMAT: 'RSA_INVALID_KEY_FORMAT',
+        INVALID_DATA_FORMAT: 'RSA_INVALID_DATA_FORMAT',
+        INVALID_INPUT: 'RSA_INVALID_INPUT'
+    };
+
+    constructor() {
+        this.keySize = 2048; // RSA-2048 for security
+        this.algorithm = 'RSA-OAEP-256';
+    }
+
+    /**
+     * Generate RSA keypair as fallback
+     * @param {string} securityLevel - 'standard' or 'high' (both use RSA-2048)
+     * @returns {Promise<Object>} Keypair object
+     */
+    async generateKeypair(securityLevel = 'standard') {
+        try {
+            console.log('Generating RSA-2048 keypair as fallback...');
+            
+            const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+                modulusLength: this.keySize,
+                publicKeyEncoding: {
+                    type: 'spki',
+                    format: 'pem'
+                },
+                privateKeyEncoding: {
+                    type: 'pkcs8',
+                    format: 'pem'
+                }
+            });
+
+            return {
+                publicKey: Buffer.from(publicKey).toString('base64'),
+                privateKey: Buffer.from(privateKey).toString('base64'),
+                algorithm: this.algorithm,
+                securityLevel: securityLevel,
+                keySize: {
+                    publicKey: publicKey.length,
+                    privateKey: privateKey.length
+                },
+                generatedAt: new Date().toISOString(),
+                fallback: true
+            };
+        } catch (error) {
+            console.error('RSA keypair generation failed:', error.message);
+            const fallbackError = new Error(`RSA fallback keypair generation failed: ${error.message}`);
+            fallbackError.code = RSAFallbackCrypto.ERROR_CODES.KEYPAIR_GENERATION_FAILED;
+            throw fallbackError;
+        }
+    }
+
+    /**
+     * Encrypt data using RSA-OAEP as fallback
+     * @param {string} data - Data to encrypt
+     * @param {string} publicKeyBase64 - Base64 encoded RSA public key
+     * @returns {Promise<Object>} Encrypted data object
+     */
+    async encrypt(data, publicKeyBase64) {
+        try {
+            if (!data || typeof data !== 'string') {
+                const error = new Error('Data must be a non-empty string');
+                error.code = RSAFallbackCrypto.ERROR_CODES.INVALID_INPUT;
+                throw error;
+            }
+
+            if (!publicKeyBase64 || typeof publicKeyBase64 !== 'string') {
+                const error = new Error('Public key must be a non-empty base64 string');
+                error.code = RSAFallbackCrypto.ERROR_CODES.INVALID_KEY_FORMAT;
+                throw error;
+            }
+
+            // Convert base64 public key to PEM format
+            let publicKeyPem;
+            try {
+                publicKeyPem = Buffer.from(publicKeyBase64, 'base64').toString('utf8');
+            } catch (keyError) {
+                const error = new Error(`Invalid base64 public key format: ${keyError.message}`);
+                error.code = RSAFallbackCrypto.ERROR_CODES.INVALID_KEY_FORMAT;
+                throw error;
+            }
+
+            // Create public key object
+            let publicKey;
+            try {
+                publicKey = crypto.createPublicKey(publicKeyPem);
+            } catch (keyError) {
+                const error = new Error(`Invalid RSA public key format: ${keyError.message}`);
+                error.code = RSAFallbackCrypto.ERROR_CODES.INVALID_KEY_FORMAT;
+                throw error;
+            }
+
+            // Encrypt data using RSA-OAEP
+            let encryptedBuffer;
+            try {
+                encryptedBuffer = crypto.publicEncrypt({
+                    key: publicKey,
+                    padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                    oaepHash: 'sha256'
+                }, Buffer.from(data, 'utf8'));
+            } catch (encryptError) {
+                const error = new Error(`RSA encryption failed: ${encryptError.message}`);
+                error.code = RSAFallbackCrypto.ERROR_CODES.ENCRYPTION_FAILED;
+                throw error;
+            }
+
+            return {
+                version: 'rsa-v1',
+                algorithm: this.algorithm,
+                securityLevel: 'standard',
+                encryptedData: encryptedBuffer.toString('base64'),
+                timestamp: new Date().toISOString(),
+                fallback: true
+            };
+        } catch (error) {
+            console.error('RSA fallback encryption failed:', error.message);
+            
+            if (!error.code) {
+                error.code = RSAFallbackCrypto.ERROR_CODES.ENCRYPTION_FAILED;
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Decrypt RSA encrypted data
+     * @param {Object} encryptedData - Encrypted data object
+     * @param {string} privateKeyBase64 - Base64 encoded RSA private key
+     * @returns {Promise<string>} Decrypted data
+     */
+    async decrypt(encryptedData, privateKeyBase64) {
+        try {
+            if (!encryptedData || typeof encryptedData !== 'object') {
+                const error = new Error('Encrypted data must be a non-null object');
+                error.code = RSAFallbackCrypto.ERROR_CODES.INVALID_DATA_FORMAT;
+                throw error;
+            }
+
+            if (!privateKeyBase64 || typeof privateKeyBase64 !== 'string') {
+                const error = new Error('Private key must be a non-empty base64 string');
+                error.code = RSAFallbackCrypto.ERROR_CODES.INVALID_KEY_FORMAT;
+                throw error;
+            }
+
+            // Convert base64 private key to PEM format
+            let privateKeyPem;
+            try {
+                privateKeyPem = Buffer.from(privateKeyBase64, 'base64').toString('utf8');
+            } catch (keyError) {
+                const error = new Error(`Invalid base64 private key format: ${keyError.message}`);
+                error.code = RSAFallbackCrypto.ERROR_CODES.INVALID_KEY_FORMAT;
+                throw error;
+            }
+
+            // Create private key object
+            let privateKey;
+            try {
+                privateKey = crypto.createPrivateKey(privateKeyPem);
+            } catch (keyError) {
+                const error = new Error(`Invalid RSA private key format: ${keyError.message}`);
+                error.code = RSAFallbackCrypto.ERROR_CODES.INVALID_KEY_FORMAT;
+                throw error;
+            }
+
+            // Get encrypted data buffer
+            let encryptedBuffer;
+            try {
+                encryptedBuffer = Buffer.from(encryptedData.encryptedData, 'base64');
+            } catch (bufferError) {
+                const error = new Error(`Invalid base64 encrypted data: ${bufferError.message}`);
+                error.code = RSAFallbackCrypto.ERROR_CODES.INVALID_DATA_FORMAT;
+                throw error;
+            }
+
+            // Decrypt using RSA-OAEP
+            let decryptedBuffer;
+            try {
+                decryptedBuffer = crypto.privateDecrypt({
+                    key: privateKey,
+                    padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                    oaepHash: 'sha256'
+                }, encryptedBuffer);
+            } catch (decryptError) {
+                const error = new Error(`RSA decryption failed: ${decryptError.message}`);
+                error.code = RSAFallbackCrypto.ERROR_CODES.DECRYPTION_FAILED;
+                throw error;
+            }
+
+            return decryptedBuffer.toString('utf8');
+        } catch (error) {
+            console.error('RSA fallback decryption failed:', error.message);
+            
+            if (!error.code) {
+                error.code = RSAFallbackCrypto.ERROR_CODES.DECRYPTION_FAILED;
+            }
+            throw error;
+        }
+    }
+}
+
 // Memory optimization for serverless environment
 if (process.env.NODE_ENV === 'production') {
     // Optimize garbage collection for post-quantum operations
@@ -585,3 +793,4 @@ class PostQuantumCrypto {
 }
 
 module.exports = PostQuantumCrypto;
+module.exports.RSAFallbackCrypto = RSAFallbackCrypto;

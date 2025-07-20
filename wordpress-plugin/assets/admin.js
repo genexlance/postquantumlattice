@@ -169,17 +169,52 @@
                 nonce: pqls_ajax.nonce
             },
             success: function(response) {
+                var statusClass = response.success ? 'notice-success' : 'notice-error';
+                var resultHtml = '<p><strong>Connection Test Result:</strong></p>';
+                
+                if (response.success) {
+                    var data = response.data;
+                    if (typeof data === 'object' && data.status) {
+                        // Enhanced response with status details
+                        resultHtml += '<p>✅ ' + (data.message || 'Connection successful!') + '</p>';
+                        resultHtml += '<table class="form-table" style="margin-top: 10px;">';
+                        resultHtml += '<tr><th style="width: 150px;">OQS Available:</th><td>' + (data.status.oqs_available ? '✅ Yes' : '❌ No') + '</td></tr>';
+                        resultHtml += '<tr><th>Functional:</th><td>' + (data.status.functional ? '✅ Yes' : '❌ No') + '</td></tr>';
+                        if (data.status.version) {
+                            resultHtml += '<tr><th>Version:</th><td>' + data.status.version + '</td></tr>';
+                        }
+                        resultHtml += '<tr><th>Health:</th><td>' + (data.status.health || 'Unknown') + '</td></tr>';
+                        if (data.status.algorithms && data.status.algorithms.length > 0) {
+                            resultHtml += '<tr><th>Algorithms:</th><td>' + data.status.algorithms.length + ' supported</td></tr>';
+                        }
+                        resultHtml += '</table>';
+                    } else {
+                        // Simple response
+                        resultHtml += '<p>✅ ' + (typeof data === 'string' ? data : data.message || 'Connection successful!') + '</p>';
+                    }
+                } else {
+                    resultHtml += '<p>❌ ' + (response.data || 'Connection failed') + '</p>';
+                    
+                    // Add retry button for connection failures
+                    resultHtml += '<p><button type="button" class="button button-small" onclick="PQLS_Admin.testConnection.call($(\'#test-connection\')[0], {preventDefault: function(){}})">Retry Connection</button></p>';
+                }
+                
                 $('#key-status')
-                    .removeClass('notice-error notice-success')
-                    .addClass(response.success ? 'notice-success' : 'notice-error')
-                    .html('<p>' + response.data + '</p>')
+                    .removeClass('notice-error notice-success notice-warning')
+                    .addClass(statusClass)
+                    .html(resultHtml)
                     .show();
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                var errorHtml = '<p><strong>Connection Test Result:</strong></p>';
+                errorHtml += '<p>❌ Connection test failed: ' + error + '</p>';
+                errorHtml += '<p><em>Please check your microservice URL and network connection.</em></p>';
+                errorHtml += '<p><button type="button" class="button button-small" onclick="PQLS_Admin.testConnection.call($(\'#test-connection\')[0], {preventDefault: function(){}})">Retry Connection</button></p>';
+                
                 $('#key-status')
-                    .removeClass('notice-success')
+                    .removeClass('notice-success notice-warning')
                     .addClass('notice-error')
-                    .html('<p>Connection test failed. Please check your network connection.</p>')
+                    .html(errorHtml)
                     .show();
             },
             complete: function() {

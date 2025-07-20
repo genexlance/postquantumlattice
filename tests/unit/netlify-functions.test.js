@@ -284,7 +284,8 @@ describe('Netlify Functions Unit Tests', () => {
       expect(response.statusCode).toBe(400);
       
       const body = JSON.parse(response.body);
-      expect(body.error).toContain('RSA decryption failed');
+      // Updated to match the more specific error message from RSA fallback utility
+      expect(body.error).toContain('Invalid RSA private key format');
     });
 
     test('should detect encryption type correctly', async () => {

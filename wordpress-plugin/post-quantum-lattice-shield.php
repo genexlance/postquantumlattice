@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: The Lattice
+ * Plugin Name: WP PostQuantum
  * Plugin URI: https://github.com/genexlance/postquantumlatticeshield
  * Description: Secure form data encryption using post-quantum cryptography (ML-KEM-768/1024) with RSA fallback. Integrates with Gravity Forms to encrypt sensitive field data with quantum-resistant security.
  * Version: 1.1.0
@@ -23,6 +23,406 @@ define('PQLS_VERSION', '1.0.0');
 define('PQLS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PQLS_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('PQLS_MICROSERVICE_URL', 'https://postquantumlatticeshield.netlify.app/api');
+
+/**
+ * Comprehensive Error Handler Class
+ */
+class PQLS_ErrorHandler {
+    
+    // Error codes for different types of failures
+    const ERROR_ENCRYPTION_FAILED = 'ENCRYPTION_FAILED';
+    const ERROR_DECRYPTION_FAILED = 'DECRYPTION_FAILED';
+    const ERROR_KEY_GENERATION_FAILED = 'KEY_GENERATION_FAILED';
+    const ERROR_CONNECTION_FAILED = 'CONNECTION_FAILED';
+    const ERROR_INVALID_KEY = 'INVALID_KEY';
+    const ERROR_MICROSERVICE_UNAVAILABLE = 'MICROSERVICE_UNAVAILABLE';
+    const ERROR_RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED';
+    const ERROR_TIMEOUT = 'TIMEOUT';
+    const ERROR_INVALID_DATA = 'INVALID_DATA';
+    const ERROR_PERMISSION_DENIED = 'PERMISSION_DENIED';
+    
+    // Retry configuration
+    private $max_retries = 3;
+    private $retry_delay = 1; // seconds
+    private $backoff_multiplier = 2;
+    
+    public function __construct() {
+        // Initialize error logging
+        add_action('admin_notices', array($this, 'display_admin_notices'));
+        add_action('wp_ajax_pqls_dismiss_notice', array($this, 'ajax_dismiss_notice'));
+        add_action('wp_ajax_nopriv_pqls_dismiss_notice', array($this, 'ajax_dismiss_notice'));
+    }
+    
+    /**
+     * Handle form submission errors with user-friendly messages
+     */
+    public function handle_form_error($form, $message, $error_code = null, $context = []) {
+        $user_friendly_message = $this->get_user_friendly_message($error_code, $message, $context);
+        
+        // Store error in transient for display
+        $form_errors = get_transient('pqls_form_errors_' . $form['id']) ?: [];
+        $form_errors[] = [
+            'message' => $user_friendly_message,
+            'code' => $error_code,
+            'timestamp' => current_time('mysql'),
+            'context' => $context
+        ];
+        set_transient('pqls_form_errors_' . $form['id'], $form_errors, 300); // 5 minutes
+        
+        // Log the detailed error
+        $this->log_error('Form Error', $message, $error_code, array_merge($context, [
+            'form_id' => $form['id'],
+            'form_title' => $form['title'] ?? 'Unknown'
+        ]));
+        
+        // Add admin notice for persistent issues
+        if ($this->is_critical_error($error_code)) {
+            $this->add_admin_notice($user_friendly_message, 'error', $error_code);
+        }
+    }
+    
+    /**
+     * Handle encryption/decryption operation errors
+     */
+    public function handle_crypto_error($operation, $error_message, $error_code = null, $context = []) {
+        $user_message = $this->get_user_friendly_message($error_code, $error_message, $context);
+        
+        // Log the error with full context
+        $this->log_error($operation, $error_message, $error_code, $context);
+        
+        // Add admin notice for configuration issues
+        if (in_array($error_code, [self::ERROR_KEY_GENERATION_FAILED, self::ERROR_CONNECTION_FAILED, self::ERROR_MICROSERVICE_UNAVAILABLE])) {
+            $this->add_admin_notice($user_message, 'error', $error_code);
+        }
+        
+        return [
+            'success' => false,
+            'message' => $user_message,
+            'code' => $error_code,
+            'can_retry' => $this->can_retry($error_code)
+        ];
+    }
+    
+    /**
+     * Handle key generation and connection issues
+     */
+    public function handle_key_generation_error($error_message, $error_code = null, $context = []) {
+        $user_message = $this->get_user_friendly_message($error_code, $error_message, $context);
+        
+        // Log the error
+        $this->log_error('Key Generation', $error_message, $error_code, $context);
+        
+        // Always show admin notice for key generation issues
+        $this->add_admin_notice($user_message, 'error', $error_code, true);
+        
+        return [
+            'success' => false,
+            'message' => $user_message,
+            'code' => $error_code,
+            'requires_admin_action' => true
+        ];
+    }
+    
+    /**
+     * Implement retry logic for microservice communication
+     */
+    public function retry_microservice_request($callback, $context = []) {
+        $attempt = 0;
+        $delay = $this->retry_delay;
+        
+        while ($attempt < $this->max_retries) {
+            $attempt++;
+            
+            try {
+                $result = call_user_func($callback);
+                
+                // Log successful retry if it wasn't the first attempt
+                if ($attempt > 1) {
+                    $this->log_activity("Microservice request succeeded on attempt {$attempt}", 'info', $context);
+                }
+                
+                return $result;
+                
+            } catch (Exception $e) {
+                $this->log_error('Microservice Request', $e->getMessage(), $e->getCode(), array_merge($context, [
+                    'attempt' => $attempt,
+                    'max_attempts' => $this->max_retries
+                ]));
+                
+                // If this was the last attempt, handle the final failure
+                if ($attempt >= $this->max_retries) {
+                    return $this->handle_crypto_error('Microservice Request', $e->getMessage(), $e->getCode() ?: self::ERROR_CONNECTION_FAILED, $context);
+                }
+                
+                // Wait before retrying with exponential backoff
+                sleep($delay);
+                $delay *= $this->backoff_multiplier;
+            }
+        }
+        
+        // This should never be reached, but just in case
+        return $this->handle_crypto_error('Microservice Request', 'Maximum retry attempts exceeded', self::ERROR_CONNECTION_FAILED, $context);
+    }
+    
+
+    
+    /**
+     * Get user-friendly error messages
+     */
+    private function get_user_friendly_message($error_code, $original_message, $context = []) {
+        switch ($error_code) {
+            case self::ERROR_ENCRYPTION_FAILED:
+                return __('Unable to encrypt your data. Please try submitting the form again. If the problem persists, contact support.', 'pqls');
+                
+            case self::ERROR_DECRYPTION_FAILED:
+                return __('Unable to decrypt the requested data. This may be due to a key mismatch or corrupted data.', 'pqls');
+                
+            case self::ERROR_KEY_GENERATION_FAILED:
+                return __('Failed to generate encryption keys. Please check your microservice connection and try again.', 'pqls');
+                
+            case self::ERROR_CONNECTION_FAILED:
+                return __('Unable to connect to the encryption service. Please check your internet connection and try again.', 'pqls');
+                
+            case self::ERROR_MICROSERVICE_UNAVAILABLE:
+                return __('The encryption service is temporarily unavailable. Please try again in a few minutes.', 'pqls');
+                
+            case self::ERROR_INVALID_KEY:
+                return __('Invalid encryption key detected. Please regenerate your keys in the plugin settings.', 'pqls');
+                
+            case self::ERROR_RATE_LIMIT_EXCEEDED:
+                return __('Too many requests. Please wait a moment before trying again.', 'pqls');
+                
+            case self::ERROR_TIMEOUT:
+                return __('The request timed out. Please try again with a smaller amount of data.', 'pqls');
+                
+            case self::ERROR_INVALID_DATA:
+                return __('Invalid data format detected. Please check your input and try again.', 'pqls');
+                
+            case self::ERROR_PERMISSION_DENIED:
+                return __('You do not have permission to perform this action.', 'pqls');
+                
+            default:
+                // For unknown errors, provide a generic but helpful message
+                return __('An unexpected error occurred. Please try again or contact support if the problem persists.', 'pqls');
+        }
+    }
+    
+    /**
+     * Determine if an error can be retried
+     */
+    private function can_retry($error_code) {
+        $retryable_errors = [
+            self::ERROR_CONNECTION_FAILED,
+            self::ERROR_MICROSERVICE_UNAVAILABLE,
+            self::ERROR_TIMEOUT,
+            self::ERROR_RATE_LIMIT_EXCEEDED
+        ];
+        
+        return in_array($error_code, $retryable_errors);
+    }
+    
+    /**
+     * Check if an error is critical and requires immediate admin attention
+     */
+    private function is_critical_error($error_code) {
+        $critical_errors = [
+            self::ERROR_KEY_GENERATION_FAILED,
+            self::ERROR_INVALID_KEY,
+            self::ERROR_MICROSERVICE_UNAVAILABLE
+        ];
+        
+        return in_array($error_code, $critical_errors);
+    }
+    
+    /**
+     * Add admin notice
+     */
+    private function add_admin_notice($message, $type = 'error', $error_code = null, $persistent = false) {
+        $notices = get_option('pqls_admin_notices', []);
+        
+        $notice_id = md5($message . $error_code);
+        
+        // Don't add duplicate notices
+        if (isset($notices[$notice_id])) {
+            return;
+        }
+        
+        $notices[$notice_id] = [
+            'message' => $message,
+            'type' => $type,
+            'error_code' => $error_code,
+            'timestamp' => current_time('mysql'),
+            'persistent' => $persistent,
+            'dismissed' => false
+        ];
+        
+        update_option('pqls_admin_notices', $notices);
+    }
+    
+    /**
+     * Display admin notices
+     */
+    public function display_admin_notices() {
+        if (!current_user_can('manage_pqls')) {
+            return;
+        }
+        
+        $notices = get_option('pqls_admin_notices', []);
+        
+        foreach ($notices as $notice_id => $notice) {
+            if ($notice['dismissed']) {
+                continue;
+            }
+            
+            // Auto-dismiss non-persistent notices after 24 hours
+            if (!$notice['persistent'] && strtotime($notice['timestamp']) < (time() - 86400)) {
+                unset($notices[$notice_id]);
+                continue;
+            }
+            
+            $class = 'notice notice-' . $notice['type'];
+            if (!$notice['persistent']) {
+                $class .= ' is-dismissible';
+            }
+            
+            echo '<div class="' . esc_attr($class) . '" data-notice-id="' . esc_attr($notice_id) . '">';
+            echo '<p><strong>Post Quantum Lattice Shield:</strong> ' . esc_html($notice['message']) . '</p>';
+            
+            // Add action buttons for specific error types
+            if ($notice['error_code'] === self::ERROR_KEY_GENERATION_FAILED) {
+                echo '<p>';
+                echo '<a href="' . admin_url('options-general.php?page=pqls-settings&tab=keys') . '" class="button button-primary">' . __('Go to Key Management', 'pqls') . '</a> ';
+                echo '<button type="button" class="button" onclick="pqlsTestConnection()">' . __('Test Connection', 'pqls') . '</button>';
+                echo '</p>';
+            }
+            
+            echo '</div>';
+        }
+        
+        // Update notices to remove expired ones
+        update_option('pqls_admin_notices', $notices);
+    }
+    
+    /**
+     * AJAX handler to dismiss notices
+     */
+    public function ajax_dismiss_notice() {
+        if (!wp_verify_nonce($_POST['nonce'], 'pqls_nonce') || !current_user_can('manage_pqls')) {
+            wp_die('Unauthorized');
+        }
+        
+        $notice_id = sanitize_text_field($_POST['notice_id']);
+        $notices = get_option('pqls_admin_notices', []);
+        
+        if (isset($notices[$notice_id])) {
+            $notices[$notice_id]['dismissed'] = true;
+            update_option('pqls_admin_notices', $notices);
+        }
+        
+        wp_send_json_success();
+    }
+    
+    /**
+     * Comprehensive error logging
+     */
+    private function log_error($operation, $message, $error_code = null, $context = []) {
+        $log_entry = [
+            'timestamp' => current_time('c'),
+            'operation' => $operation,
+            'message' => $message,
+            'error_code' => $error_code,
+            'context' => $context,
+            'user_id' => get_current_user_id(),
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+            'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown'
+        ];
+        
+        // Log to WordPress error log
+        error_log('PQLS Error [' . $operation . ']: ' . $message . ' | Code: ' . $error_code . ' | Context: ' . json_encode($context));
+        
+        // Store in database for admin review
+        $this->store_error_log($log_entry);
+        
+        // Log activity for audit trail
+        $this->log_activity($operation . ' failed: ' . $message, 'error', $context);
+    }
+    
+    /**
+     * Store error log in database
+     */
+    private function store_error_log($log_entry) {
+        $error_logs = get_option('pqls_error_logs', []);
+        
+        // Add new log entry
+        $error_logs[] = $log_entry;
+        
+        // Keep only last 100 entries to prevent database bloat
+        if (count($error_logs) > 100) {
+            $error_logs = array_slice($error_logs, -100);
+        }
+        
+        update_option('pqls_error_logs', $error_logs);
+    }
+    
+    /**
+     * Log activity for audit trail
+     */
+    private function log_activity($message, $level = 'info', $context = []) {
+        $log_entries = get_option('pqls_activity_log', []);
+        
+        $log_entries[] = [
+            'timestamp' => current_time('mysql'),
+            'message' => $message,
+            'level' => $level,
+            'user_id' => get_current_user_id(),
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            'context' => $context
+        ];
+        
+        // Keep only last 50 entries
+        if (count($log_entries) > 50) {
+            $log_entries = array_slice($log_entries, -50);
+        }
+        
+        update_option('pqls_activity_log', $log_entries);
+    }
+    
+    /**
+     * Get error statistics for admin dashboard
+     */
+    public function get_error_statistics() {
+        $error_logs = get_option('pqls_error_logs', []);
+        $stats = [
+            'total_errors' => count($error_logs),
+            'recent_errors' => 0,
+            'error_types' => [],
+            'most_common_error' => null
+        ];
+        
+        $recent_threshold = time() - 86400; // 24 hours
+        $error_counts = [];
+        
+        foreach ($error_logs as $log) {
+            $timestamp = strtotime($log['timestamp']);
+            
+            if ($timestamp > $recent_threshold) {
+                $stats['recent_errors']++;
+            }
+            
+            $error_code = $log['error_code'] ?? 'unknown';
+            $error_counts[$error_code] = ($error_counts[$error_code] ?? 0) + 1;
+        }
+        
+        if (!empty($error_counts)) {
+            arsort($error_counts);
+            $stats['error_types'] = $error_counts;
+            $stats['most_common_error'] = array_key_first($error_counts);
+        }
+        
+        return $stats;
+    }
+}
 
 /**
  * Main plugin class
@@ -114,7 +514,14 @@ class PostQuantumLatticeShield {
      * Plugin activation
      */
     public function activate() {
-        // Generate initial key pair
+        // Generate unique site identifier if not exists
+        $site_id = get_option('pqls_site_id');
+        if (empty($site_id)) {
+            $site_id = $this->generate_unique_site_id();
+            update_option('pqls_site_id', $site_id);
+        }
+        
+        // Generate initial key pair with site-specific context
         $this->generate_keypair();
         
         // Set default settings
@@ -148,46 +555,144 @@ class PostQuantumLatticeShield {
     }
     
     /**
-     * Generate ML-KEM keypair
+     * Generate unique site identifier
+     */
+    private function generate_unique_site_id() {
+        // Create a unique identifier based on site URL, installation path, and random data
+        $site_url = get_site_url();
+        $site_path = ABSPATH;
+        $random_data = wp_generate_password(32, false, false);
+        $timestamp = current_time('timestamp');
+        
+        // Create a hash that's unique to this WordPress installation
+        $unique_string = $site_url . '|' . $site_path . '|' . $random_data . '|' . $timestamp;
+        $site_id = hash('sha256', $unique_string);
+        
+        // Use first 16 characters for a shorter but still unique identifier
+        return substr($site_id, 0, 16);
+    }
+
+    /**
+     * Get current site identifier
+     */
+    private function get_site_id() {
+        $site_id = get_option('pqls_site_id');
+        if (empty($site_id)) {
+            $site_id = $this->generate_unique_site_id();
+            update_option('pqls_site_id', $site_id);
+        }
+        return $site_id;
+    }
+
+    /**
+     * Check if data is encrypted (supports both old and new formats)
+     */
+    private function is_encrypted_data($value) {
+        if (empty($value)) {
+            return false;
+        }
+        
+        // Check for all supported encrypted data formats
+        return (strpos($value, 'pqls_encrypted::') === 0 ||
+                strpos($value, 'pqls_pq_encrypted::') === 0 ||
+                strpos($value, 'pqls_rsa_encrypted::') === 0);
+    }
+
+    /**
+     * Enhanced error handler class for comprehensive error management
+     */
+    private $error_handler;
+    
+    /**
+     * Initialize error handler
+     */
+    private function init_error_handler() {
+        if (!$this->error_handler) {
+            $this->error_handler = new PQLS_ErrorHandler();
+        }
+        return $this->error_handler;
+    }
+
+    /**
+     * Generate ML-KEM keypair with enhanced error handling
      */
     private function generate_keypair() {
+        $this->init_error_handler();
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         
-        $response = wp_remote_get($microservice_url . '/generate-keypair', [
-            'timeout' => 30
-        ]);
-        
-        if (is_wp_error($response)) {
-            error_log('PQLS: Failed to generate keypair - ' . $response->get_error_message());
-            return false;
-        }
-        
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-        
-        if ($status_code !== 200) {
-            error_log('PQLS: Generate keypair failed with status ' . $status_code . ': ' . $body);
-            return false;
-        }
-        
-        $data = json_decode($body, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log('PQLS: Invalid JSON response: ' . json_last_error_msg());
-            return false;
-        }
-        
-        if (isset($data['publicKey']) && isset($data['privateKey'])) {
+        try {
+            // Use retry logic for key generation
+            $data = $this->error_handler->retry_microservice_request(function() use ($microservice_url) {
+                $response = wp_remote_get($microservice_url . '/generate-keypair', [
+                    'timeout' => 30
+                ]);
+                
+                if (is_wp_error($response)) {
+                    throw new Exception('Connection failed: ' . $response->get_error_message());
+                }
+                
+                $status_code = wp_remote_retrieve_response_code($response);
+                $body = wp_remote_retrieve_body($response);
+                
+                if ($status_code !== 200) {
+                    throw new Exception("HTTP {$status_code}: {$body}");
+                }
+                
+                $result = json_decode($body, true);
+                
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new Exception('Invalid JSON response: ' . json_last_error_msg());
+                }
+                
+                if (!isset($result['publicKey']) || !isset($result['privateKey'])) {
+                    throw new Exception('Response missing required keys: ' . print_r($result, true));
+                }
+                
+                return $result;
+                
+            }, ['operation' => 'generate_keypair', 'url' => $microservice_url]);
+            
+            // If retry logic returns an error result
+            if (is_array($data) && isset($data['success']) && !$data['success']) {
+                $this->error_handler->handle_key_generation_error(
+                    $data['message'], 
+                    PQLS_ErrorHandler::ERROR_KEY_GENERATION_FAILED,
+                    ['microservice_url' => $microservice_url]
+                );
+                return false;
+            }
+            
+            // Get or generate site ID for key isolation
+            $site_id = get_option('pqls_site_id');
+            if (empty($site_id)) {
+                $site_id = $this->generate_unique_site_id();
+                update_option('pqls_site_id', $site_id);
+            }
+            
+            // Store keys with site-specific prefixes for security
             update_option('pqls_public_key', $data['publicKey']);
             update_option('pqls_private_key', $data['privateKey']);
             update_option('pqls_algorithm', $data['algorithm']);
             update_option('pqls_key_generated', current_time('mysql'));
+            update_option('pqls_site_key_version', '1.0'); // Track key format version
+            
+            // Log successful key generation
+            $this->error_handler->log_activity('Key pair generated successfully', 'info', [
+                'algorithm' => $data['algorithm'],
+                'site_id' => $site_id
+            ]);
+            
             return true;
+            
+        } catch (Exception $e) {
+            $this->error_handler->handle_key_generation_error(
+                $e->getMessage(), 
+                PQLS_ErrorHandler::ERROR_KEY_GENERATION_FAILED,
+                ['microservice_url' => $microservice_url]
+            );
+            return false;
         }
-        
-        error_log('PQLS: Response missing required keys: ' . print_r($data, true));
-        return false;
     }
     
     /**
@@ -196,7 +701,7 @@ class PostQuantumLatticeShield {
     public function add_admin_menu() {
         add_options_page(
             __('Post Quantum Lattice Shield Settings', 'pqls'),
-            __('⚛ The Lattice ⚛', 'pqls'),
+            __('⚛ WP PostQuantum ⚛', 'pqls'),
             'manage_pqls',
             'pqls-settings',
             array($this, 'admin_page')
@@ -770,22 +1275,8 @@ class PostQuantumLatticeShield {
      * Encrypt form data before submission with post-quantum encryption
      */
     public function pre_submission_encrypt($form) {
-        $settings = get_option($this->option_name, array());
-        $all_encrypted_fields = $settings['encrypted_fields'] ?? [];
-        
-        // Ensure it's an array
-        if (!is_array($all_encrypted_fields)) {
-            $all_encrypted_fields = [];
-        }
-        
-        // Filter encrypted fields for this specific form
-        $encrypted_fields = [];
-        foreach ($all_encrypted_fields as $field_key) {
-            if (strpos($field_key, $form['id'] . '_') === 0) {
-                $field_id = str_replace($form['id'] . '_', '', $field_key);
-                $encrypted_fields[] = $field_id;
-            }
-        }
+        // Identify fields marked for encryption using the pqls_encrypt field property
+        $encrypted_fields = $this->identify_encrypted_fields($form);
         
         if (empty($encrypted_fields)) {
             return $form;
@@ -808,12 +1299,12 @@ class PostQuantumLatticeShield {
             if (strpos($key, 'input_') === 0) {
                 $field_id = str_replace('input_', '', $key);
                 if (in_array($field_id, $encrypted_fields) && !empty($value)) {
-                    $encrypted_value = $this->encrypt_data_enhanced($value, $public_key, $form['id'], $field_id);
+                    $encrypted_value = $this->encrypt_field_value($value, $field_id, $form['id']);
                     
                     if ($encrypted_value === false) {
-                        // Graceful error handling - don't break form submission
+                        // Prevent form submission on encryption failure
                         error_log("PQLS: Failed to encrypt field {$field_id} in form {$form['id']}");
-                        $this->add_form_error($form, __('Some fields could not be encrypted. Please try again.', 'pqls'));
+                        $this->add_form_error($form, __('Unable to encrypt sensitive data. Please try again or contact support.', 'pqls'));
                         return $form;
                     }
                     
@@ -832,6 +1323,196 @@ class PostQuantumLatticeShield {
         $this->log_activity("Form {$form['id']} encrypted with " . ($is_post_quantum ? 'post-quantum' : 'RSA') . " encryption");
         
         return $form;
+    }
+    
+    /**
+     * Identify fields marked for encryption using the pqls_encrypt field property
+     */
+    private function identify_encrypted_fields($form) {
+        $encrypted_fields = [];
+        
+        if (!isset($form['fields']) || !is_array($form['fields'])) {
+            return $encrypted_fields;
+        }
+        
+        foreach ($form['fields'] as $field) {
+            // Check if field has pqls_encrypt property set to true
+            if (isset($field['pqls_encrypt']) && $field['pqls_encrypt'] === true) {
+                $encrypted_fields[] = $field['id'];
+            }
+        }
+        
+        return $encrypted_fields;
+    }
+    
+    /**
+     * Encrypt field value using the microservice encrypt endpoint with enhanced error handling
+     */
+    private function encrypt_field_value($value, $field_id, $form_id) {
+        $this->init_error_handler();
+        $settings = get_option($this->option_name, array());
+        $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
+        $public_key = get_option('pqls_public_key');
+        $algorithm = get_option('pqls_algorithm', 'ML-KEM-768');
+        $security_level = get_option('pqls_security_level', 'standard');
+        
+        // Performance optimization: skip encryption for empty values
+        if (empty($value) || trim($value) === '') {
+            return $value;
+        }
+        
+        // Validate prerequisites
+        if (empty($public_key)) {
+            $this->error_handler->handle_crypto_error(
+                'Field Encryption',
+                'Public key not configured',
+                PQLS_ErrorHandler::ERROR_INVALID_KEY,
+                ['form_id' => $form_id, 'field_id' => $field_id]
+            );
+            return false;
+        }
+        
+        $data_size = strlen($value);
+        $context = [
+            'form_id' => $form_id,
+            'field_id' => $field_id,
+            'algorithm' => $algorithm,
+            'data_size' => $data_size,
+            'microservice_url' => $microservice_url
+        ];
+        
+        try {
+            // Use retry logic for encryption
+            $result = $this->error_handler->retry_microservice_request(function() use ($value, $public_key, $algorithm, $security_level, $microservice_url, $form_id, $field_id, $data_size) {
+                
+                // Prepare request body with enhanced metadata
+                $request_body = [
+                    'data' => $value,
+                    'publicKey' => trim($public_key),
+                    'algorithm' => $algorithm,
+                    'metadata' => [
+                        'form_id' => $form_id,
+                        'field_id' => $field_id,
+                        'algorithm' => $algorithm,
+                        'security_level' => $security_level,
+                        'timestamp' => current_time('c'),
+                        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown'
+                    ]
+                ];
+                
+                // Add security level parameter for post-quantum encryption
+                if (!$this->is_rsa_algorithm($algorithm)) {
+                    $request_body['securityLevel'] = $security_level;
+                }
+                
+                $body = json_encode($request_body);
+                
+                // Enhanced timeout based on data size and algorithm
+                $timeout = $this->calculate_encryption_timeout($data_size, $algorithm);
+                
+                $response = wp_remote_post($microservice_url . '/encrypt', [
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                        'User-Agent' => 'PQLS-WordPress/' . PQLS_VERSION
+                    ],
+                    'body' => $body,
+                    'timeout' => $timeout,
+                    'blocking' => true
+                ]);
+
+                if (is_wp_error($response)) {
+                    $error_code = $response->get_error_code();
+                    if ($error_code === 'http_request_timeout') {
+                        throw new Exception('Request timeout - data may be too large', PQLS_ErrorHandler::ERROR_TIMEOUT);
+                    } else {
+                        throw new Exception('Connection failed: ' . $response->get_error_message(), PQLS_ErrorHandler::ERROR_CONNECTION_FAILED);
+                    }
+                }
+
+                $status_code = wp_remote_retrieve_response_code($response);
+                $response_body = wp_remote_retrieve_body($response);
+
+                if ($status_code === 429) {
+                    throw new Exception('Rate limit exceeded', PQLS_ErrorHandler::ERROR_RATE_LIMIT_EXCEEDED);
+                } elseif ($status_code === 503) {
+                    throw new Exception('Service temporarily unavailable', PQLS_ErrorHandler::ERROR_MICROSERVICE_UNAVAILABLE);
+                } elseif ($status_code !== 200) {
+                    // Try to parse error details
+                    $error_data = json_decode($response_body, true);
+                    $error_message = $error_data['error'] ?? "HTTP {$status_code}";
+                    
+                    if ($status_code === 400) {
+                        throw new Exception($error_message, PQLS_ErrorHandler::ERROR_INVALID_DATA);
+                    } else {
+                        throw new Exception($error_message, PQLS_ErrorHandler::ERROR_ENCRYPTION_FAILED);
+                    }
+                }
+
+                $result = json_decode($response_body, true);
+                
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new Exception('Invalid JSON response: ' . json_last_error_msg(), PQLS_ErrorHandler::ERROR_INVALID_DATA);
+                }
+                
+                // Validate response structure
+                if (!isset($result['encryptedData'])) {
+                    throw new Exception('Missing encryptedData in response', PQLS_ErrorHandler::ERROR_ENCRYPTION_FAILED);
+                }
+                
+                return $result;
+                
+            }, $context);
+            
+            // Handle retry result
+            if (is_array($result) && isset($result['success']) && !$result['success']) {
+                $this->log_encryption_performance($form_id, $field_id, $data_size, false, $result['message']);
+                return false;
+            }
+            
+            // Log successful encryption with performance metrics
+            $encrypted_size = strlen($result['encryptedData']);
+            $this->log_encryption_performance($form_id, $field_id, $data_size, true, null, $encrypted_size);
+            
+            // Get site identifier for key isolation
+            $site_id = get_option('pqls_site_id');
+            if (empty($site_id)) {
+                $site_id = $this->generate_unique_site_id();
+                update_option('pqls_site_id', $site_id);
+            }
+            
+            // Create enhanced encrypted data format with site isolation
+            $encrypted_data_format = [
+                'encrypted' => true,
+                'algorithm' => $algorithm,
+                'data' => $result['encryptedData'],
+                'site_id' => $site_id,
+                'encrypted_at' => current_time('c'),
+                'version' => '2.0' // Updated format version
+            ];
+            
+            // Add format identifier prefix for backward compatibility and easier detection
+            $prefix = !$this->is_rsa_algorithm($algorithm) ? 'pqls_pq_encrypted::' : 'pqls_rsa_encrypted::';
+            $encrypted_data = $prefix . base64_encode(json_encode($encrypted_data_format));
+            
+            // Log successful encryption operation
+            $this->error_handler->log_activity("Field encrypted successfully", 'info', $context);
+            
+            return $encrypted_data;
+            
+        } catch (Exception $e) {
+            // Determine error code from exception
+            $error_code = $e->getCode() ?: PQLS_ErrorHandler::ERROR_ENCRYPTION_FAILED;
+            
+            $this->error_handler->handle_crypto_error(
+                'Field Encryption',
+                $e->getMessage(),
+                $error_code,
+                $context
+            );
+            
+            $this->log_encryption_performance($form_id, $field_id, $data_size, false, $e->getMessage());
+            return false;
+        }
     }
     
     /**
@@ -926,15 +1607,22 @@ class PostQuantumLatticeShield {
         $encrypted_size = strlen($result['encryptedData']);
         $this->log_encryption_performance($form_id, $field_id, $data_size, true, null, $encrypted_size);
         
-        // Add prefix to identify encrypted data format
-        $encrypted_data = $result['encryptedData'];
+        // Get site identifier for key isolation
+        $site_id = $this->get_site_id();
         
-        // Add format identifier for easier detection during decryption
-        if (!$this->is_rsa_algorithm($algorithm)) {
-            $encrypted_data = 'pqls_pq_encrypted::' . $encrypted_data;
-        } else {
-            $encrypted_data = 'pqls_rsa_encrypted::' . $encrypted_data;
-        }
+        // Create enhanced encrypted data format with site isolation
+        $encrypted_data_format = [
+            'encrypted' => true,
+            'algorithm' => $algorithm,
+            'data' => $result['encryptedData'],
+            'site_id' => $site_id,
+            'encrypted_at' => current_time('c'),
+            'version' => '2.0' // Updated format version
+        ];
+        
+        // Add format identifier prefix for backward compatibility and easier detection
+        $prefix = !$this->is_rsa_algorithm($algorithm) ? 'pqls_pq_encrypted::' : 'pqls_rsa_encrypted::';
+        $encrypted_data = $prefix . base64_encode(json_encode($encrypted_data_format));
         
         return $encrypted_data;
     }
@@ -1004,19 +1692,6 @@ class PostQuantumLatticeShield {
     }
     
     /**
-     * Add form error message
-     */
-    private function add_form_error($form, $message) {
-        // Store error in session or transient for display
-        $form_errors = get_transient('pqls_form_errors_' . $form['id']) ?: [];
-        $form_errors[] = $message;
-        set_transient('pqls_form_errors_' . $form['id'], $form_errors, 300); // 5 minutes
-        
-        // Also log the error
-        error_log("PQLS Form Error (Form {$form['id']}): {$message}");
-    }
-    
-    /**
      * Log activity for audit trail
      */
     private function log_activity($message, $level = 'info') {
@@ -1039,46 +1714,140 @@ class PostQuantumLatticeShield {
     }
 
     private function decrypt_data($encrypted_data) {
+        $this->init_error_handler();
         $api_key = get_option('pqls_api_key');
         $microservice_url = get_option('pqls_settings')['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         $private_key = get_option('pqls_private_key');
+        $current_site_id = get_option('pqls_site_id');
 
+        // Validate prerequisites
         if (empty($api_key) || empty($private_key)) {
-            return ['success' => false, 'message' => 'API Key or Private Key is not configured.'];
+            return $this->error_handler->handle_crypto_error(
+                'Data Decryption',
+                'API Key or Private Key is not configured',
+                PQLS_ErrorHandler::ERROR_INVALID_KEY,
+                ['microservice_url' => $microservice_url]
+            );
         }
 
-        $body = json_encode([
-            'encryptedData' => $encrypted_data,
-            'privateKey' => $private_key
-        ]);
+        $context = [
+            'microservice_url' => $microservice_url,
+            'data_length' => strlen($encrypted_data),
+            'site_id' => $current_site_id
+        ];
 
-        $response = wp_remote_post($microservice_url . '/decrypt', [
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $api_key
-            ],
-            'body' => $body,
-            'timeout' => 30
-        ]);
-
-        if (is_wp_error($response)) {
-            error_log('PQLS: Decryption request failed - ' . $response->get_error_message());
-            return ['success' => false, 'message' => 'Request failed: ' . $response->get_error_message()];
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
-        $result = json_decode($response_body, true);
-
-        if ($status_code === 200 && isset($result['decryptedData'])) {
-            return ['success' => true, 'data' => $result['decryptedData']];
-        } else {
-            $error_message = $result['error'] ?? 'Unknown error';
-            if(isset($result['details'])) {
-                $error_message .= ' - Details: ' . $result['details'];
+        try {
+            // Parse the new encrypted data format with site isolation
+            $actual_encrypted_data = $encrypted_data;
+            $site_id_from_data = null;
+            $data_version = '1.0'; // Default to legacy format
+            
+            // Check if this is the new format (version 2.0) with site isolation
+            if (strpos($encrypted_data, 'pqls_pq_encrypted::') === 0 || strpos($encrypted_data, 'pqls_rsa_encrypted::') === 0) {
+                $prefix_length = strpos($encrypted_data, 'pqls_pq_encrypted::') === 0 ? 19 : 20;
+                $encoded_data = substr($encrypted_data, $prefix_length);
+                
+                // Try to decode as new format
+                $decoded_data = base64_decode($encoded_data);
+                if ($decoded_data !== false) {
+                    $data_structure = json_decode($decoded_data, true);
+                    if (json_last_error() === JSON_ERROR_NONE && isset($data_structure['version']) && $data_structure['version'] === '2.0') {
+                        // New format with site isolation
+                        $actual_encrypted_data = $data_structure['data'];
+                        $site_id_from_data = $data_structure['site_id'];
+                        $data_version = $data_structure['version'];
+                        $context['data_version'] = $data_version;
+                        $context['data_site_id'] = $site_id_from_data;
+                        
+                        // Verify site isolation - only decrypt data encrypted by this site
+                        if ($site_id_from_data !== $current_site_id) {
+                            return $this->error_handler->handle_crypto_error(
+                                'Data Decryption',
+                                'Data encrypted by different site - access denied for security',
+                                PQLS_ErrorHandler::ERROR_PERMISSION_DENIED,
+                                $context
+                            );
+                        }
+                    } else {
+                        // Legacy format - just remove prefix
+                        $actual_encrypted_data = $encoded_data;
+                    }
+                }
             }
-            error_log("PQLS: Decryption failed with status {$status_code}. Response: {$response_body}");
-            return ['success' => false, 'message' => $error_message];
+
+            // Use retry logic for decryption
+            $result = $this->error_handler->retry_microservice_request(function() use ($actual_encrypted_data, $private_key, $api_key, $microservice_url) {
+                
+                $body = json_encode([
+                    'encryptedData' => $actual_encrypted_data,
+                    'privateKey' => $private_key
+                ]);
+
+                $response = wp_remote_post($microservice_url . '/decrypt', [
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                        'Authorization' => 'Bearer ' . $api_key
+                    ],
+                    'body' => $body,
+                    'timeout' => 30
+                ]);
+
+                if (is_wp_error($response)) {
+                    $error_code = $response->get_error_code();
+                    if ($error_code === 'http_request_timeout') {
+                        throw new Exception('Request timeout during decryption', PQLS_ErrorHandler::ERROR_TIMEOUT);
+                    } else {
+                        throw new Exception('Connection failed: ' . $response->get_error_message(), PQLS_ErrorHandler::ERROR_CONNECTION_FAILED);
+                    }
+                }
+
+                $status_code = wp_remote_retrieve_response_code($response);
+                $response_body = wp_remote_retrieve_body($response);
+                $result = json_decode($response_body, true);
+
+                if ($status_code === 200 && isset($result['decryptedData'])) {
+                    return $result;
+                } else {
+                    $error_message = $result['error'] ?? 'Unknown error';
+                    if(isset($result['details'])) {
+                        $error_message .= ' - Details: ' . $result['details'];
+                    }
+                    
+                    if ($status_code === 401) {
+                        throw new Exception('Authentication failed: ' . $error_message, PQLS_ErrorHandler::ERROR_PERMISSION_DENIED);
+                    } elseif ($status_code === 400) {
+                        throw new Exception('Invalid data format: ' . $error_message, PQLS_ErrorHandler::ERROR_INVALID_DATA);
+                    } elseif ($status_code === 429) {
+                        throw new Exception('Rate limit exceeded', PQLS_ErrorHandler::ERROR_RATE_LIMIT_EXCEEDED);
+                    } elseif ($status_code === 503) {
+                        throw new Exception('Service temporarily unavailable', PQLS_ErrorHandler::ERROR_MICROSERVICE_UNAVAILABLE);
+                    } else {
+                        throw new Exception($error_message, PQLS_ErrorHandler::ERROR_DECRYPTION_FAILED);
+                    }
+                }
+                
+            }, $context);
+            
+            // Handle retry result
+            if (is_array($result) && isset($result['success']) && !$result['success']) {
+                return $result;
+            }
+            
+            // Log successful decryption
+            $this->error_handler->log_activity("Data decrypted successfully", 'info', $context);
+            
+            return ['success' => true, 'data' => $result['decryptedData']];
+            
+        } catch (Exception $e) {
+            // Determine error code from exception
+            $error_code = $e->getCode() ?: PQLS_ErrorHandler::ERROR_DECRYPTION_FAILED;
+            
+            return $this->error_handler->handle_crypto_error(
+                'Data Decryption',
+                $e->getMessage(),
+                $error_code,
+                $context
+            );
         }
     }
     
@@ -1089,18 +1858,22 @@ class PostQuantumLatticeShield {
         check_ajax_referer('pqls_nonce', 'nonce');
         
         if (!current_user_can('decrypt_pqls_data')) {
-            wp_send_json_error('Permission denied');
+            wp_send_json_error(__('Permission denied', 'pqls'));
         }
         
         $encrypted_data = sanitize_text_field($_POST['data']);
-        $decrypted_data = $this->decrypt_data($encrypted_data);
         
-        if ($decrypted_data === false) {
-            wp_send_json_error('Decryption failed');
-        } else {
+        // The decrypt_data method now handles both old and new formats with site isolation
+        // No need to remove prefixes here as decrypt_data handles format detection
+        $decryption_result = $this->decrypt_data($encrypted_data);
+        
+        if ($decryption_result['success']) {
             // Log the decryption event for audit purposes
-            error_log(sprintf('PQLS Audit: User %d decrypted data.', get_current_user_id()));
-            wp_send_json_success($decrypted_data);
+            error_log(sprintf('PQLS Audit: User %d decrypted field data.', get_current_user_id()));
+            wp_send_json_success($decryption_result['data']);
+        } else {
+            error_log(sprintf('PQLS: Decryption failed for user %d: %s', get_current_user_id(), $decryption_result['message']));
+            wp_send_json_error($decryption_result['message']);
         }
     }
     
@@ -1314,21 +2087,26 @@ class PostQuantumLatticeShield {
     public function format_encrypted_entry_display($value, $field, $entry, $form) {
         $field_id = is_object($field) ? $field->id : $field;
         
-        if ($value !== null && strpos($value, 'pqls_encrypted::') === 0) {
+        if ($value !== null && $this->is_encrypted_data($value)) {
             if (current_user_can('decrypt_pqls_data')) {
-                $html = '<span class="pqls-encrypted-badge">💫🔒💫</span>';
+                $html = '<div class="pqls-encrypted-data-container">';
+                $html .= '<span class="pqls-encrypted-badge">🔒</span>';
                 $html .= '<div class="pqls-encrypted-data" data-encrypted="' . esc_attr($value) . '">';
-                $html .= '<span class="pqls-redacted-view">[REDACTED]</span>';
+                $html .= '<span class="pqls-redacted-view">[Encrypted]</span>';
                 $html .= '<span class="pqls-decrypted-view" style="display:none;"></span>';
                 $html .= '</div>';
                 $html .= '<div class="pqls-actions">';
-                $html .= '<a href="#" class="button button-small pqls-decrypt-button">' . __('Decrypt', 'pqls') . '</a>';
-                $html .= '<a href="#" class="button button-small pqls-hide-button" style="display:none;">' . __('Hide', 'pqls') . '</a>';
+                $html .= '<button type="button" class="button button-small pqls-decrypt-button">' . __('Decrypt', 'pqls') . '</button>';
+                $html .= '<button type="button" class="button button-small pqls-hide-button" style="display:none;">' . __('Hide', 'pqls') . '</button>';
                 $html .= '</div>';
-                $html .= '<div class="pqls-security-warning" style="display:none;color:red;font-size:12px;margin-top:5px;">' . __('Warning: This data is now visible. Be cautious where you display it.', 'pqls') . '</div>';
+                $html .= '<div class="pqls-security-warning" style="display:none;color:#d63638;font-size:12px;margin-top:5px;">';
+                $html .= '<span class="dashicons dashicons-warning" style="font-size:12px;"></span> ';
+                $html .= __('Warning: This data is now visible. Be cautious where you display it.', 'pqls');
+                $html .= '</div>';
+                $html .= '</div>';
                 return $html;
             } else {
-                return '<span class="pqls-encrypted-badge">💫🔒💫</span> [REDACTED]';
+                return '<span class="pqls-encrypted-badge">🔒</span> <span class="pqls-no-permission">[Encrypted]</span>';
             }
         }
         
@@ -1341,7 +2119,7 @@ class PostQuantumLatticeShield {
     public function add_encryption_notice($form, $entry) {
         $has_encrypted = false;
         foreach($entry as $key => $value) {
-            if (is_numeric($key) && strpos($value, 'pqls_encrypted::') === 0) {
+            if (is_numeric($key) && $this->is_encrypted_data($value)) {
                 $has_encrypted = true;
                 break;
             }
@@ -1426,11 +2204,13 @@ class PostQuantumLatticeShield {
         }
     }
 
+
     /**
      * Enqueue scripts for Gravity Forms pages
      */
     public function enqueue_gravity_forms_scripts($hook) {
-        if (strpos($hook, 'gf_entries') === false) {
+        // Load on both entries and form editor pages
+        if (strpos($hook, 'gf_entries') === false && strpos($hook, 'gf_edit_forms') === false) {
             return;
         }
 
@@ -1454,10 +2234,13 @@ class PostQuantumLatticeShield {
                 var data_div = container.find('.pqls-encrypted-data');
                 var encrypted_data = data_div.data('encrypted');
                 var decrypted_view = container.find('.pqls-decrypted-view');
+                var redacted_view = container.find('.pqls-redacted-view');
                 var security_warning = container.find('.pqls-security-warning');
                 var hide_button = container.find('.pqls-hide-button');
                 
-                button.text(pqls_ajax.strings.decrypting);
+                // Show loading state
+                button.prop('disabled', true);
+                button.html('<span class=\"dashicons dashicons-update\" style=\"animation: spin 1s linear infinite;\"></span> ' + pqls_ajax.strings.decrypting);
 
                 jQuery.post(pqls_ajax.ajax_url, {
                     action: 'pqls_decrypt_field',
@@ -1465,15 +2248,21 @@ class PostQuantumLatticeShield {
                     data: encrypted_data
                 }, function(response) {
                     if (response.success) {
-                        decrypted_view.text(response.data).show();
-                        data_div.find('.pqls-redacted-view').hide();
+                        // Display decrypted data inline
+                        decrypted_view.html('<strong>Decrypted:</strong> ' + jQuery('<div>').text(response.data).html()).show();
+                        redacted_view.hide();
                         security_warning.show();
                         button.hide();
                         hide_button.show();
                     } else {
-                        decrypted_view.text(pqls_ajax.strings.decrypt_failed).show();
-                        button.text('Decrypt');
+                        // Show error message
+                        decrypted_view.html('<span style=\"color: #d63638;\">Error: ' + (response.data || pqls_ajax.strings.decrypt_failed) + '</span>').show();
+                        button.html('Decrypt').prop('disabled', false);
                     }
+                }).fail(function() {
+                    // Handle AJAX failure
+                    decrypted_view.html('<span style=\"color: #d63638;\">Error: ' + pqls_ajax.strings.decrypt_failed + '</span>').show();
+                    button.html('Decrypt').prop('disabled', false);
                 });
             });
 
@@ -1481,11 +2270,17 @@ class PostQuantumLatticeShield {
                 e.preventDefault();
                 var button = jQuery(this);
                 var container = button.closest('.pqls-encrypted-data-container');
-                container.find('.pqls-decrypted-view').hide();
-                container.find('.pqls-redacted-view').show();
-                container.find('.pqls-security-warning').hide();
+                var decrypted_view = container.find('.pqls-decrypted-view');
+                var redacted_view = container.find('.pqls-redacted-view');
+                var security_warning = container.find('.pqls-security-warning');
+                var decrypt_button = container.find('.pqls-decrypt-button');
+                
+                // Hide decrypted data and show encrypted placeholder
+                decrypted_view.hide();
+                redacted_view.show();
+                security_warning.hide();
                 button.hide();
-                container.find('.pqls-decrypt-button').show().text('Decrypt');
+                decrypt_button.show().prop('disabled', false).html('Decrypt');
             });
         ";
         wp_add_inline_script('pqls-gravity-forms', $inline_script);
@@ -1498,7 +2293,7 @@ class PostQuantumLatticeShield {
         if ($position == 50) { // Advanced settings
             ?>
             <li class="encrypt_field_setting field_setting">
-                <input type="checkbox" id="field_encrypt_value" onclick="SetFieldProperty('encryptField', this.checked);" />
+                <input type="checkbox" id="field_encrypt_value" onclick="SetFieldProperty('pqls_encrypt', this.checked);" />
                 <label for="field_encrypt_value" class="inline">
                     <?php _e('Encrypt this field', 'pqls'); ?>
                     <?php gform_tooltip('form_field_encrypt_value'); ?>
@@ -1532,23 +2327,17 @@ class PostQuantumLatticeShield {
             fieldSettings.website += ', .encrypt_field_setting';
             // Add to other fields as needed...
 
-            // Set the 'encryptField' property when the form editor is loaded
+            // Set the 'pqls_encrypt' property when the form editor is loaded
             jQuery(document).bind('gform_load_field_settings', function(event, field, form) {
-                jQuery('#field_encrypt_value').prop('checked', field.encryptField == true);
+                jQuery('#field_encrypt_value').prop('checked', field.pqls_encrypt == true);
             });
-
-            // This function is now part of Gravity Forms and can be called directly
-            // function SetFieldProperty(name, value) {
-            //     // This is a placeholder for the actual GF function
-            //     // In a real scenario, this would update the field object
-            // }
 
             // Save the setting when the form is saved
             gform.add_filter('gform_pre_form_editor_save', function (form) {
                 for (var i = 0; i < form.fields.length; i++) {
                     var field = form.fields[i];
-                    if (typeof field.encryptField === 'undefined') {
-                        field.encryptField = false;
+                    if (typeof field.pqls_encrypt === 'undefined') {
+                        field.pqls_encrypt = false;
                     }
                 }
                 return form;
@@ -1565,11 +2354,17 @@ class PostQuantumLatticeShield {
             return $content;
         }
 
-        $encrypted_fields = (array) ($this->encrypted_fields ?? []);
-        $field_id_key = $form_id . '_' . $field->id;
-
-        if (in_array($field_id_key, $encrypted_fields)) {
-            $content .= ' <span class="pqls-encrypted-icon" title="' . esc_attr__('This field is end-to-end encrypted.', 'pqls') . '">🔒</span>';
+        // Check if field is marked for encryption using the pqls_encrypt property
+        if (!empty($field->pqls_encrypt)) {
+            $indicator = '<div class="pqls-field-indicator">' .
+                '<span class="pqls-encryption-badge">' .
+                '<span class="dashicons dashicons-shield-alt"></span> ' .
+                __('Encrypted', 'pqls') .
+                '</span>' .
+                '</div>';
+            
+            // Insert indicator before the field
+            $content = $indicator . $content;
         }
 
         return $content;
@@ -1579,11 +2374,9 @@ class PostQuantumLatticeShield {
      * Add a CSS class to encrypted fields for styling
      */
     public function add_encryption_field_class($classes, $field, $form) {
-        $encrypted_fields = (array) ($this->encrypted_fields ?? []);
-        $field_id_key = $form['id'] . '_' . $field->id;
-
-        if (in_array($field_id_key, $encrypted_fields)) {
-            $classes .= ' pqls-encrypted-field';
+        // Check if field is marked for encryption using the pqls_encrypt property
+        if (!empty($field->pqls_encrypt)) {
+            $classes .= ' pqls-encrypted-field-input';
         }
 
         return $classes;
@@ -1774,11 +2567,20 @@ class PostQuantumLatticeShield {
         }
         
         if (isset($data['publicKey']) && isset($data['privateKey'])) {
+            // Get or generate site ID for key isolation
+            $site_id = get_option('pqls_site_id');
+            if (empty($site_id)) {
+                $site_id = $this->generate_unique_site_id();
+                update_option('pqls_site_id', $site_id);
+            }
+            
+            // Store keys with site-specific context
             update_option('pqls_public_key', $data['publicKey']);
             update_option('pqls_private_key', $data['privateKey']);
             update_option('pqls_algorithm', $data['algorithm'] ?? $algorithm);
             update_option('pqls_security_level', $data['securityLevel'] ?? $security_level);
             update_option('pqls_key_generated', current_time('mysql'));
+            update_option('pqls_site_key_version', '1.0'); // Track key format version
             return true;
         }
         
@@ -1934,16 +2736,31 @@ class PostQuantumLatticeShield {
     }
     
     /**
-     * Display form errors from encryption failures
+     * Display form errors from encryption failures with enhanced formatting
      */
     public function display_form_errors($form, $is_ajax, $field_values) {
         $form_errors = get_transient('pqls_form_errors_' . $form['id']);
         
         if (!empty($form_errors)) {
             foreach ($form_errors as $error) {
+                // Handle both old string format and new array format
+                $error_message = is_array($error) ? $error['message'] : $error;
+                $error_code = is_array($error) ? $error['code'] : null;
+                
                 echo '<div class="pqls-form-error gform_validation_error" role="alert">';
                 echo '<h2 class="gform_submission_error hide_summary">' . __('Encryption Error', 'pqls') . '</h2>';
-                echo '<div class="validation_error">' . esc_html($error) . '</div>';
+                echo '<div class="validation_error">' . esc_html($error_message) . '</div>';
+                
+                // Add retry button for retryable errors
+                if (is_array($error) && isset($error['code'])) {
+                    $this->init_error_handler();
+                    if ($this->error_handler->can_retry($error['code'])) {
+                        echo '<div class="pqls-error-actions" style="margin-top: 10px;">';
+                        echo '<button type="button" class="button button-small" onclick="location.reload()">' . __('Try Again', 'pqls') . '</button>';
+                        echo '</div>';
+                    }
+                }
+                
                 echo '</div>';
             }
             
@@ -2551,8 +3368,10 @@ class PostQuantumLatticeShield {
             FROM {$table_name} 
             WHERE meta_value LIKE %s 
             OR meta_value LIKE %s
+            OR meta_value LIKE %s
+            OR meta_value LIKE %s
             LIMIT %d
-        ", 'pqls_encrypted::%', '%\"version\":\"pq-v1\"%', $limit);
+        ", 'pqls_encrypted::%', 'pqls_pq_encrypted::%', 'pqls_rsa_encrypted::%', '%\"version\":\"2.0\"%', $limit);
         
         $results = $wpdb->get_results($query, ARRAY_A);
         
@@ -2577,7 +3396,9 @@ class PostQuantumLatticeShield {
             FROM {$table_name} 
             WHERE meta_value LIKE %s 
             OR meta_value LIKE %s
-        ", 'pqls_encrypted::%', '%\"version\":\"pq-v1\"%');
+            OR meta_value LIKE %s
+            OR meta_value LIKE %s
+        ", 'pqls_encrypted::%', 'pqls_pq_encrypted::%', 'pqls_rsa_encrypted::%', '%\"version\":\"2.0\"%');
         
         return intval($wpdb->get_var($query));
     }
@@ -2589,12 +3410,8 @@ class PostQuantumLatticeShield {
         try {
             $encrypted_data = $entry['encrypted_data'];
             
-            // Remove prefix if present
-            if (strpos($encrypted_data, 'pqls_encrypted::') === 0) {
-                $encrypted_data = substr($encrypted_data, 16);
-            }
-            
-            // Attempt to decrypt
+            // The decrypt_data method now handles both old and new formats with site isolation
+            // No need to remove prefixes here as decrypt_data handles format detection
             $decrypted = $this->decrypt_data($encrypted_data);
             
             return $decrypted;

@@ -1,4 +1,5 @@
 const PostQuantumCrypto = require('./crypto-utils');
+const { RSAFallbackCrypto } = require('./crypto-utils');
 
 // Memory optimization for serverless environment
 if (process.env.NODE_ENV === 'production') {
@@ -193,68 +194,77 @@ exports.handler = async (event) => {
 
         monitor.mark('initialization');
         
-        // Ensure OQS library is initialized
+        let encryptedResult;
+        let usedFallback = false;
+        
+        // Try post-quantum encryption first
         try {
             await ensureInitialized();
-        } catch (initError) {
-            console.error('OQS initialization failed:', initError.message, initError.code);
+            monitor.mark('pq-encryption-start');
             
-            let errorMessage = 'Post-quantum cryptography library is not available.';
-            let statusCode = 500;
-            
-            if (initError.code === PostQuantumCrypto.ERROR_CODES.LIBRARY_LOAD_FAILED) {
-                errorMessage = 'Post-quantum cryptography library failed to load. Please contact system administrator.';
-            } else if (initError.code === PostQuantumCrypto.ERROR_CODES.ALGORITHM_NOT_SUPPORTED) {
-                errorMessage = `Required encryption algorithms are not supported by the current library installation.`;
-                statusCode = 503; // Service Unavailable
-            }
-            
-            return {
-                statusCode: statusCode,
-                body: JSON.stringify({ 
-                    error: errorMessage,
-                    code: initError.code,
-                    timestamp: new Date().toISOString()
-                }),
-                headers: { 'Content-Type': 'application/json' }
-            };
-        }
-
-        monitor.mark('encryption-start');
-        
-        // Perform post-quantum encryption
-        let encryptedResult;
-        try {
+            console.log(`Attempting post-quantum encryption with ${algorithm}...`);
             encryptedResult = await pqCrypto.encrypt(data, publicKey, algorithm);
-        } catch (encryptError) {
-            console.error('Post-quantum encryption failed:', encryptError.message, encryptError.code);
             
-            let errorMessage = 'Encryption failed due to an internal error.';
-            let statusCode = 500;
+            console.log('Post-quantum encryption successful');
             
-            if (encryptError.code === PostQuantumCrypto.ERROR_CODES.INVALID_KEY_FORMAT) {
-                errorMessage = 'Invalid public key format. Please ensure the key is properly base64 encoded.';
-                statusCode = 400;
-            } else if (encryptError.code === PostQuantumCrypto.ERROR_CODES.ENCAPSULATION_FAILED) {
-                errorMessage = 'Key encapsulation failed. This may indicate an incompatible or corrupted public key.';
-                statusCode = 400;
-            } else if (encryptError.code === PostQuantumCrypto.ERROR_CODES.ENCRYPTION_FAILED) {
-                errorMessage = 'Data encryption failed during AES-GCM operation.';
-            } else if (encryptError.code === PostQuantumCrypto.ERROR_CODES.ALGORITHM_NOT_SUPPORTED) {
-                errorMessage = `Algorithm ${algorithm} is not supported by the current system configuration.`;
-                statusCode = 400;
+        } catch (pqError) {
+            console.warn('Post-quantum encryption failed, attempting RSA fallback:', pqError.message);
+            console.warn('Error code:', pqError.code);
+            
+            // Attempt RSA fallback
+            try {
+                monitor.mark('rsa-fallback-start');
+                
+                const rsaFallback = new RSAFallbackCrypto();
+                console.log('Using RSA fallback encryption...');
+                
+                encryptedResult = await rsaFallback.encrypt(data, publicKey);
+                usedFallback = true;
+                
+                console.log('RSA fallback encryption successful');
+                
+            } catch (rsaError) {
+                console.error('Both post-quantum and RSA encryption failed');
+                console.error('Post-quantum error:', pqError.message, pqError.code);
+                console.error('RSA fallback error:', rsaError.message, rsaError.code);
+                
+                // Determine the most appropriate error to return
+                let errorMessage = 'Encryption failed - both post-quantum and RSA fallback unsuccessful.';
+                let statusCode = 500;
+                let errorCode = 'ENCRYPTION_FAILED';
+                
+                // If the original PQ error was due to invalid input, prioritize that
+                if (pqError.code === PostQuantumCrypto.ERROR_CODES.INVALID_KEY_FORMAT ||
+                    rsaError.code === RSAFallbackCrypto.ERROR_CODES.INVALID_KEY_FORMAT) {
+                    errorMessage = 'Invalid public key format. Please ensure the key is properly formatted.';
+                    statusCode = 400;
+                    errorCode = 'INVALID_KEY_FORMAT';
+                } else if (pqError.code === PostQuantumCrypto.ERROR_CODES.INVALID_INPUT ||
+                          rsaError.code === RSAFallbackCrypto.ERROR_CODES.INVALID_INPUT) {
+                    errorMessage = 'Invalid input parameters provided.';
+                    statusCode = 400;
+                    errorCode = 'INVALID_INPUT';
+                } else if (pqError.code === PostQuantumCrypto.ERROR_CODES.LIBRARY_LOAD_FAILED) {
+                    errorMessage = 'Cryptography libraries are not available on this system.';
+                    statusCode = 503;
+                    errorCode = 'SERVICE_UNAVAILABLE';
+                }
+                
+                return {
+                    statusCode: statusCode,
+                    body: JSON.stringify({ 
+                        error: errorMessage,
+                        code: errorCode,
+                        details: {
+                            postQuantumError: pqError.message,
+                            rsaFallbackError: rsaError.message
+                        },
+                        algorithm: algorithm,
+                        timestamp: new Date().toISOString()
+                    }),
+                    headers: { 'Content-Type': 'application/json' }
+                };
             }
-            
-            return {
-                statusCode: statusCode,
-                body: JSON.stringify({ 
-                    error: errorMessage,
-                    code: encryptError.code,
-                    algorithm: algorithm,
-                    timestamp: new Date().toISOString()
-                }),
-                headers: { 'Content-Type': 'application/json' }
-            };
         }
 
         monitor.mark('response-preparation');
@@ -269,7 +279,9 @@ exports.handler = async (event) => {
                 version: encryptedResult.version,
                 encryptedAt: encryptedResult.timestamp,
                 dataSize: data.length,
-                encryptedSize: encryptedResult.encryptedData.length
+                encryptedSize: encryptedResult.encryptedData ? encryptedResult.encryptedData.length : 0,
+                fallbackUsed: usedFallback,
+                encryptionMethod: usedFallback ? 'RSA-OAEP-256' : `${algorithm}+AES-256-GCM`
             }
         };
 
@@ -280,6 +292,7 @@ exports.handler = async (event) => {
             algorithm: encryptedResult.algorithm,
             securityLevel: encryptedResult.securityLevel,
             dataSize: data.length,
+            fallbackUsed: usedFallback,
             performance: performanceMetrics
         });
 
@@ -290,6 +303,7 @@ exports.handler = async (event) => {
                 'Content-Type': 'application/json',
                 'X-Encryption-Algorithm': encryptedResult.algorithm,
                 'X-Security-Level': encryptedResult.securityLevel,
+                'X-Fallback-Used': usedFallback.toString(),
                 'X-Performance-Ms': performanceMetrics.totalDurationMs.toString()
             }
         };

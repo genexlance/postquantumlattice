@@ -1,310 +1,356 @@
 /**
- * Post Quantum Lattice Shield - Frontend CSS
- * Styling for encrypted field indicators and post-quantum features
+ * Post Quantum Lattice Shield - Frontend Styles
+ * Styling for encrypted field indicators and user interface
  */
 
-/* Base encrypted field styling */
-.pqls-encrypted-field-frontend {
-    position: relative;
+/* Encrypted field indicator */
+.pqls-field-indicator {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.pqls-field-encryption-indicator {
+.pqls-encryption-badge {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 4px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    font-size: 10px;
-    font-weight: bold;
     padding: 4px 8px;
-    border-radius: 12px;
-    margin-left: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    min-width: 80px;
-    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: help;
+    transition: all 0.2s ease;
+    position: relative;
+    tabindex: 0;
 }
 
-.pqls-field-encryption-indicator:hover {
+.pqls-encryption-badge:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-.pqls-field-encryption-indicator:focus {
-    outline: 2px solid #4dabf7;
+.pqls-encryption-badge:focus {
+    outline: 2px solid #007cba;
     outline-offset: 2px;
 }
 
-/* Post-quantum specific styling */
-.pqls-post-quantum .pqls-field-encryption-indicator {
-    background: linear-gradient(135deg, #4dabf7 0%, #667eea 100%);
-    border: 1px solid #4dabf7;
+.pqls-encryption-badge .dashicons {
+    font-size: 12px;
+    line-height: 1;
 }
 
-.pqls-post-quantum .pqls-field-encryption-indicator::before {
-    content: "🔐";
-    margin-right: 4px;
-    font-size: 8px;
+.pqls-security-level {
+    font-size: 9px;
+    opacity: 0.8;
+    margin-left: 4px;
+    padding-left: 4px;
+    border-left: 1px solid rgba(255,255,255,0.3);
 }
 
-/* RSA fallback styling */
-.pqls-rsa .pqls-field-encryption-indicator {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-    border: 1px solid #f39c12;
-}
-
-.pqls-rsa .pqls-field-encryption-indicator::before {
-    content: "🔒";
-    margin-right: 4px;
-    font-size: 8px;
-}
-
-/* Animation states */
-.pqls-encrypting .pqls-field-encryption-indicator {
-    animation: pqls-pulse 0.8s ease-in-out infinite;
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-}
-
-.pqls-post-quantum-processing {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    border: 2px solid #4dabf7;
-    animation: pqls-quantum-pulse 1s ease-in-out infinite;
-}
-
-.pqls-encrypted-complete {
-    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%) !important;
-    animation: pqls-success-glow 0.5s ease-out;
-}
-
-.pqls-encryption-success {
-    animation: pqls-success-pulse 1s ease-in-out;
-}
-
-/* Field focus states */
-.pqls-field-focused .pqls-field-encryption-indicator {
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.pqls-indicator-focused {
-    outline: 2px solid #4dabf7;
-    outline-offset: 2px;
-}
-
-/* Form error styling */
-.pqls-form-error {
-    background: #fee;
-    border: 1px solid #dc3545;
+/* Form encryption notice */
+.pqls-form-encryption-notice {
+    background: #e8f4fd;
+    border: 1px solid #bee5eb;
+    border-left: 4px solid #17a2b8;
     border-radius: 4px;
-    padding: 15px;
-    margin: 15px 0;
-    color: #721c24;
+    padding: 12px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #0c5460;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.pqls-form-error h2 {
+.pqls-form-encryption-notice .dashicons {
+    color: #17a2b8;
+    font-size: 16px;
+}
+
+.pqls-form-encryption-notice.pqls-processing {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+    border-left-color: #ffc107;
+    color: #856404;
+}
+
+.pqls-form-encryption-notice.pqls-processing .dashicons {
+    color: #ffc107;
+}
+
+/* Encrypted field input styling */
+.pqls-encrypted-field-input {
+    border-left: 3px solid #667eea !important;
+    background: linear-gradient(90deg, rgba(102,126,234,0.05) 0%, transparent 100%) !important;
+}
+
+.pqls-encrypted-field-input:focus {
+    border-left-color: #764ba2 !important;
+    box-shadow: 0 0 0 2px rgba(102,126,234,0.2) !important;
+}
+
+/* Tooltip styling */
+.pqls-tooltip {
+    position: absolute;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    max-width: 250px;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: none;
+}
+
+.pqls-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border: 5px solid transparent;
+    border-top-color: #333;
+}
+
+/* Encryption processing states */
+.pqls-field-indicator.pqls-encrypting .pqls-encryption-badge {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    animation: pqls-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pqls-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.pqls-spin {
+    animation: pqls-spin 1s linear infinite;
+}
+
+@keyframes pqls-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error states */
+.pqls-encryption-error {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+    padding: 12px 16px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-width: 300px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pqls-encryption-error .dashicons {
     color: #dc3545;
     font-size: 16px;
-    margin: 0 0 10px 0;
-}
-
-.pqls-form-error .validation_error {
-    margin: 0;
-    font-weight: normal;
-}
-
-/* Accessibility improvements */
-.pqls-high-contrast .pqls-field-encryption-indicator {
-    border: 2px solid #000;
-    background: #fff;
-    color: #000;
-    font-weight: bold;
-}
-
-.pqls-high-contrast .pqls-post-quantum .pqls-field-encryption-indicator {
-    background: #0066cc;
-    color: #fff;
-    border: 2px solid #003d7a;
-}
-
-.pqls-reduced-motion .pqls-field-encryption-indicator,
-.pqls-reduced-motion .pqls-encrypting .pqls-field-encryption-indicator {
-    animation: none !important;
-    transition: none !important;
-}
-
-/* Screen reader only content */
-.sr-only {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: -1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    white-space: nowrap !important;
-    border: 0 !important;
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
-    .pqls-field-encryption-indicator {
-        font-size: 9px;
+    .pqls-field-indicator {
+        margin-bottom: 6px;
+    }
+    
+    .pqls-encryption-badge {
+        font-size: 10px;
         padding: 3px 6px;
-        min-width: 70px;
-        margin-left: 4px;
     }
     
-    .pqls-field-encryption-indicator::before {
-        font-size: 7px;
-        margin-right: 2px;
-    }
-}
-
-@media (max-width: 480px) {
-    .pqls-field-encryption-indicator {
+    .pqls-security-level {
         font-size: 8px;
-        padding: 2px 4px;
-        min-width: 60px;
-        margin-left: 2px;
-        border-radius: 8px;
     }
     
-    .pqls-field-encryption-indicator::before {
-        display: none; /* Hide emoji on very small screens */
+    .pqls-form-encryption-notice {
+        padding: 10px;
+        font-size: 13px;
+        margin-bottom: 15px;
+    }
+    
+    .pqls-tooltip {
+        max-width: 200px;
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+    
+    .pqls-encryption-error {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin: 10px;
+        max-width: none;
     }
 }
 
-/* Animations */
-@keyframes pqls-pulse {
-    0% { 
-        opacity: 1;
-        transform: scale(1);
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .pqls-encryption-badge {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
     }
-    50% { 
-        opacity: 0.8;
-        transform: scale(1.02);
+    
+    .pqls-encrypted-field-input {
+        border-left-color: #000 !important;
     }
-    100% { 
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes pqls-quantum-pulse {
-    0% { 
-        border-color: #4dabf7;
-        box-shadow: 0 0 0 0 rgba(77, 171, 247, 0.4);
-    }
-    50% { 
-        border-color: #667eea;
-        box-shadow: 0 0 0 4px rgba(77, 171, 247, 0.1);
-    }
-    100% { 
-        border-color: #4dabf7;
-        box-shadow: 0 0 0 0 rgba(77, 171, 247, 0.4);
+    
+    .pqls-form-encryption-notice {
+        background: #fff;
+        color: #000;
+        border-color: #000;
     }
 }
 
-@keyframes pqls-success-pulse {
-    0% { 
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(86, 171, 47, 0.7);
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .pqls-encryption-badge {
+        transition: none;
     }
-    50% { 
-        transform: scale(1.05);
-        box-shadow: 0 0 0 10px rgba(86, 171, 47, 0);
+    
+    .pqls-encryption-badge:hover {
+        transform: none;
     }
-    100% { 
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(86, 171, 47, 0);
+    
+    .pqls-spin,
+    .pqls-pulse {
+        animation: none;
     }
-}
-
-@keyframes pqls-success-glow {
-    0% { 
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    50% { 
-        box-shadow: 0 4px 20px rgba(86, 171, 47, 0.4);
-    }
-    100% { 
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    .pqls-tooltip {
+        transition: none;
     }
 }
 
 /* Print styles */
 @media print {
-    .pqls-field-encryption-indicator {
-        background: #000 !important;
-        color: #fff !important;
-        border: 1px solid #000 !important;
-        box-shadow: none !important;
-        animation: none !important;
+    .pqls-field-indicator {
+        display: none;
     }
     
-    .pqls-field-encryption-indicator::before {
-        content: "[ENCRYPTED]" !important;
-        margin-right: 0 !important;
-        font-size: inherit !important;
+    .pqls-form-encryption-notice {
+        background: transparent;
+        border: 1px solid #000;
+        color: #000;
     }
     
-    .pqls-field-encryption-text {
-        display: none !important;
+    .pqls-form-encryption-notice::after {
+        content: " (Fields marked for encryption will be secured when submitted online)";
+        font-style: italic;
     }
 }
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
-    .pqls-field-encryption-indicator {
-        border: 1px solid rgba(255, 255, 255, 0.3);
+    .pqls-form-encryption-notice {
+        background: #1a2332;
+        border-color: #2d3748;
+        color: #e2e8f0;
     }
     
-    .pqls-form-error {
-        background: #2d1b1b;
-        border-color: #dc3545;
+    .pqls-tooltip {
+        background: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .pqls-tooltip::after {
+        border-top-color: #2d3748;
+    }
+    
+    .pqls-encryption-error {
+        background: #2d1b1f;
+        border-color: #5a2a2a;
         color: #f8d7da;
     }
-    
-    .pqls-form-error h2 {
-        color: #f5c6cb;
+}
+
+/* Animation for field highlighting */
+.pqls-encrypted-field-input.pqls-highlight {
+    animation: pqls-highlight 2s ease-in-out;
+}
+
+@keyframes pqls-highlight {
+    0%, 100% { 
+        border-left-color: #667eea;
+        background: linear-gradient(90deg, rgba(102,126,234,0.05) 0%, transparent 100%);
+    }
+    50% { 
+        border-left-color: #764ba2;
+        background: linear-gradient(90deg, rgba(118,75,162,0.1) 0%, transparent 100%);
     }
 }
 
-/* Integration with popular form plugins */
-.gform_wrapper .pqls-encrypted-field-frontend {
-    margin-bottom: 0;
+/* Accessibility improvements */
+.pqls-encryption-badge[aria-expanded="true"] {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
 }
 
-.gform_wrapper .pqls-field-encryption-indicator {
-    vertical-align: middle;
-    margin-top: 0;
+.pqls-field-indicator[role="button"] {
+    cursor: pointer;
 }
 
-/* Contact Form 7 integration */
-.wpcf7 .pqls-encrypted-field-frontend {
-    display: inline-block;
-    width: 100%;
+/* Focus indicators for keyboard navigation */
+.pqls-field-indicator:focus-within {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
-.wpcf7 .pqls-field-encryption-indicator {
-    float: right;
-    margin-top: 5px;
-}
-
-/* WPForms integration */
-.wpforms-container .pqls-encrypted-field-frontend {
+/* Loading state for form submission */
+.gform_wrapper.pqls-encrypting {
     position: relative;
+    pointer-events: none;
+    opacity: 0.8;
 }
 
-.wpforms-container .pqls-field-encryption-indicator {
+.gform_wrapper.pqls-encrypting::after {
+    content: 'Encrypting sensitive data...';
     position: absolute;
-    right: 10px;
     top: 50%;
-    transform: translateY(-50%);
-    margin: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255,255,255,0.95);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    font-weight: 600;
+    color: #333;
+    z-index: 1000;
+}
+
+/* Success state */
+.pqls-encryption-success {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-left: 4px solid #28a745;
+    color: #155724;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pqls-encryption-success .dashicons {
+    color: #28a745;
+    font-size: 16px;
 }

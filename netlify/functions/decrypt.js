@@ -40,6 +40,7 @@ if (typeof global !== 'undefined' && !global.__OQS_OPTIMIZED__) {
     };
 }
 const PostQuantumCrypto = require('./crypto-utils');
+const { RSAFallbackCrypto } = require('./crypto-utils');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
@@ -141,54 +142,67 @@ exports.handler = async (event) => {
             }
             
         } else if (encryptionType === 'rsa' || encryptionType === 'unknown') {
-            // Handle RSA encrypted data (legacy format)
+            // Handle RSA encrypted data (legacy format and fallback)
             try {
-                console.log('Attempting RSA decryption for legacy data');
+                console.log('Attempting RSA decryption for data...');
+                console.log('Encryption type detected:', encryptionType);
+                
+                const rsaFallback = new RSAFallbackCrypto();
                 
                 // Handle both direct base64 string and JSON object formats
-                let encryptedBuffer;
+                let rsaEncryptedData;
                 if (typeof encryptedData === 'string') {
                     // Direct base64 string (legacy format)
-                    encryptedBuffer = Buffer.from(encryptedData, 'base64');
+                    console.log('Processing legacy base64 string format');
+                    rsaEncryptedData = {
+                        version: 'rsa-v1',
+                        algorithm: 'RSA-OAEP-256',
+                        encryptedData: encryptedData,
+                        fallback: true
+                    };
                 } else if (typeof encryptedData === 'object' && encryptedData.encryptedData) {
                     // JSON object with encryptedData field
-                    encryptedBuffer = Buffer.from(encryptedData.encryptedData, 'base64');
+                    console.log('Processing RSA JSON object format');
+                    rsaEncryptedData = encryptedData;
                 } else {
-                    throw new Error('Invalid RSA encrypted data format');
+                    throw new Error('Invalid RSA encrypted data format - expected base64 string or object with encryptedData field');
                 }
 
-                const privateKey = crypto.createPrivateKey(privateKeyPem);
-
-                const decryptedBuffer = crypto.privateDecrypt(
-                    {
-                        key: privateKey,
-                        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-                        oaepHash: 'sha256',
-                    },
-                    encryptedBuffer
-                );
-
-                decryptedData = decryptedBuffer.toString('utf8');
+                // Use RSA fallback utility for consistent error handling
+                decryptedData = await rsaFallback.decrypt(rsaEncryptedData, privateKeyPem);
                 algorithmUsed = 'RSA-OAEP-256';
                 
-                console.log('Successfully decrypted RSA legacy data');
+                console.log('Successfully decrypted RSA data using fallback utility');
                 
             } catch (rsaError) {
                 console.error('RSA decryption failed:', rsaError.message);
+                console.error('RSA error code:', rsaError.code);
                 
-                // If RSA decryption fails and we detected unknown format, 
-                // provide helpful error message
+                // Provide specific error messages based on error codes
                 let errorMessage = 'RSA decryption failed';
-                if (encryptionType === 'unknown') {
+                let statusCode = 400;
+                
+                if (rsaError.code === RSAFallbackCrypto.ERROR_CODES.INVALID_KEY_FORMAT) {
+                    errorMessage = 'Invalid RSA private key format';
+                    statusCode = 400;
+                } else if (rsaError.code === RSAFallbackCrypto.ERROR_CODES.INVALID_DATA_FORMAT) {
+                    errorMessage = 'Invalid RSA encrypted data format';
+                    statusCode = 400;
+                } else if (rsaError.code === RSAFallbackCrypto.ERROR_CODES.DECRYPTION_FAILED) {
+                    errorMessage = 'RSA decryption failed - invalid key or corrupted data';
+                    statusCode = 400;
+                } else if (encryptionType === 'unknown') {
                     errorMessage = 'Unable to decrypt data - unrecognized format and RSA decryption failed';
+                    statusCode = 400;
                 }
                 
                 return {
-                    statusCode: 400,
+                    statusCode: statusCode,
                     body: JSON.stringify({ 
                         error: errorMessage,
                         details: rsaError.message,
                         encryptionType: encryptionType,
+                        errorCode: rsaError.code,
                         suggestion: 'Verify that the correct private key is being used and data is not corrupted'
                     })
                 };

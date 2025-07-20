@@ -369,3 +369,119 @@
     outline-offset: 2px;
 }
 
+/* New encrypted data container styles */
+.pqls-encrypted-data-container {
+    display: inline-block;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px;
+    margin: 2px 0;
+    position: relative;
+    min-width: 200px;
+}
+
+.pqls-encrypted-data-container .pqls-encrypted-badge {
+    background: #6c757d;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 8px;
+    display: inline-block;
+}
+
+.pqls-encrypted-data {
+    display: inline-block;
+    margin: 4px 0;
+}
+
+.pqls-redacted-view {
+    color: #6c757d;
+    font-style: italic;
+    font-weight: 500;
+}
+
+.pqls-decrypted-view {
+    background: #e7f3ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 3px;
+    padding: 6px;
+    margin: 4px 0;
+    font-family: monospace;
+    font-size: 13px;
+    word-break: break-word;
+    max-width: 400px;
+    display: block;
+}
+
+.pqls-actions {
+    margin-top: 8px;
+}
+
+.pqls-actions button {
+    margin-right: 6px;
+    font-size: 12px;
+    padding: 4px 8px;
+    height: auto;
+    line-height: 1.2;
+}
+
+.pqls-decrypt-button {
+    background: #0073aa;
+    border-color: #0073aa;
+    color: white;
+}
+
+.pqls-decrypt-button:hover {
+    background: #005a87;
+    border-color: #005a87;
+    color: white;
+}
+
+.pqls-decrypt-button:disabled {
+    background: #ccc;
+    border-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.pqls-hide-button {
+    background: #666;
+    border-color: #666;
+    color: white;
+}
+
+.pqls-hide-button:hover {
+    background: #555;
+    border-color: #555;
+    color: white;
+}
+
+.pqls-security-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 3px;
+    padding: 6px;
+    margin-top: 8px;
+    font-size: 12px;
+    border-left: 3px solid #ffc107;
+}
+
+.pqls-security-warning .dashicons {
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.pqls-no-permission {
+    color: #666;
+    font-style: italic;
+}
+
+/* Animation for spinning loading icon */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
