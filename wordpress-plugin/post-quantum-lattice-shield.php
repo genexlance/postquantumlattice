@@ -1286,6 +1286,22 @@ class PostQuantumLatticeShield {
     }
     
     /**
+     * Add form error for display to user
+     */
+    private function add_form_error($form, $message) {
+        // Store error in transient for display
+        $form_errors = get_transient('pqls_form_errors_' . $form['id']) ?: [];
+        $form_errors[] = [
+            'message' => $message,
+            'timestamp' => current_time('mysql')
+        ];
+        set_transient('pqls_form_errors_' . $form['id'], $form_errors, 300); // 5 minutes
+        
+        // Also log the error
+        error_log("PQLS Form Error: {$message}");
+    }
+    
+    /**
      * Encrypt form data before submission with post-quantum encryption
      */
     public function pre_submission_encrypt($form) {
@@ -1368,6 +1384,20 @@ class PostQuantumLatticeShield {
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
         $public_key = get_option('pqls_public_key');
         $algorithm = get_option('pqls_algorithm', 'ML-KEM-768');
+        
+        // Check if current algorithm is supported by microservice
+        $supported_algorithms = ['ML-KEM-768', 'ML-KEM-1024'];
+        if (!in_array($algorithm, $supported_algorithms)) {
+            // Update to supported algorithm and regenerate keys
+            $algorithm = 'ML-KEM-768';
+            update_option('pqls_algorithm', $algorithm);
+            error_log("PQLS: Updated algorithm to {$algorithm} (was using unsupported algorithm)");
+            
+            // Regenerate keys with new algorithm
+            $this->generate_keypair();
+            $public_key = get_option('pqls_public_key');
+        }
+        
         $security_level = get_option('pqls_security_level', 'standard');
         
         // Performance optimization: skip encryption for empty values
@@ -1535,7 +1565,7 @@ class PostQuantumLatticeShield {
     private function encrypt_data_enhanced($data, $public_key, $form_id, $field_id) {
         $settings = get_option($this->option_name, array());
         $microservice_url = $settings['microservice_url'] ?? PQLS_MICROSERVICE_URL;
-        $algorithm = get_option('pqls_algorithm', 'rsa-oaep-256');
+        $algorithm = get_option('pqls_algorithm', 'ML-KEM-768');
         $security_level = get_option('pqls_security_level', 'standard');
         
         // Performance optimization: skip encryption for empty values
@@ -2837,7 +2867,7 @@ class PostQuantumLatticeShield {
         wp_enqueue_script('pqls-frontend', PQLS_PLUGIN_URL . 'assets/frontend.js', array('jquery'), PQLS_VERSION, true);
         
         // Localize script with enhanced data
-        $algorithm = get_option('pqls_algorithm', 'rsa-oaep-256');
+        $algorithm = get_option('pqls_algorithm', 'ML-KEM-768');
         $security_level = get_option('pqls_security_level', 'standard');
         $is_post_quantum = !$this->is_rsa_algorithm($algorithm);
         
