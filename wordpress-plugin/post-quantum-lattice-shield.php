@@ -224,7 +224,7 @@ class PQLS_ErrorHandler {
     /**
      * Determine if an error can be retried
      */
-    private function can_retry($error_code) {
+    public function can_retry($error_code) {
         $retryable_errors = [
             self::ERROR_CONNECTION_FAILED,
             self::ERROR_MICROSERVICE_UNAVAILABLE,
@@ -382,7 +382,7 @@ class PQLS_ErrorHandler {
     /**
      * Log activity for audit trail
      */
-    private function log_activity($message, $level = 'info', $context = []) {
+    public function log_activity($message, $level = 'info', $context = []) {
         $log_entries = get_option('pqls_activity_log', []);
         
         $log_entries[] = [
