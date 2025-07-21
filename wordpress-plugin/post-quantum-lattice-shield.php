@@ -29,17 +29,31 @@ define('PQLS_MICROSERVICE_URL', 'https://postquantumlatticeshield.netlify.app/ap
  */
 class PQLS_ErrorHandler {
     
-    // Error codes for different types of failures
-    const ERROR_ENCRYPTION_FAILED = 'ENCRYPTION_FAILED';
-    const ERROR_DECRYPTION_FAILED = 'DECRYPTION_FAILED';
-    const ERROR_KEY_GENERATION_FAILED = 'KEY_GENERATION_FAILED';
-    const ERROR_CONNECTION_FAILED = 'CONNECTION_FAILED';
-    const ERROR_INVALID_KEY = 'INVALID_KEY';
-    const ERROR_MICROSERVICE_UNAVAILABLE = 'MICROSERVICE_UNAVAILABLE';
-    const ERROR_RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED';
-    const ERROR_TIMEOUT = 'TIMEOUT';
-    const ERROR_INVALID_DATA = 'INVALID_DATA';
-    const ERROR_PERMISSION_DENIED = 'PERMISSION_DENIED';
+    // Error codes for different types of failures (using integers for Exception compatibility)
+    const ERROR_ENCRYPTION_FAILED = 1001;
+    const ERROR_DECRYPTION_FAILED = 1002;
+    const ERROR_KEY_GENERATION_FAILED = 1003;
+    const ERROR_CONNECTION_FAILED = 1004;
+    const ERROR_INVALID_KEY = 1005;
+    const ERROR_MICROSERVICE_UNAVAILABLE = 1006;
+    const ERROR_RATE_LIMIT_EXCEEDED = 1007;
+    const ERROR_TIMEOUT = 1008;
+    const ERROR_INVALID_DATA = 1009;
+    const ERROR_PERMISSION_DENIED = 1010;
+    
+    // Error code to string mapping for user-friendly messages
+    private static $error_code_names = [
+        1001 => 'ENCRYPTION_FAILED',
+        1002 => 'DECRYPTION_FAILED',
+        1003 => 'KEY_GENERATION_FAILED',
+        1004 => 'CONNECTION_FAILED',
+        1005 => 'INVALID_KEY',
+        1006 => 'MICROSERVICE_UNAVAILABLE',
+        1007 => 'RATE_LIMIT_EXCEEDED',
+        1008 => 'TIMEOUT',
+        1009 => 'INVALID_DATA',
+        1010 => 'PERMISSION_DENIED'
+    ];
     
     // Retry configuration
     private $max_retries = 3;
